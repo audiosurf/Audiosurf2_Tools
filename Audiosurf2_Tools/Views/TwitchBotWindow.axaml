@@ -1,0 +1,158 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Audiosurf2_Tools.ViewModels"
+        xmlns:models="clr-namespace:Audiosurf2_Tools.Models"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="450"
+        x:Class="Audiosurf2_Tools.Views.TwitchBotWindow"
+        Title="TwitchBotWindow"
+        MinWidth="600"
+        MinHeight="450"
+        Width="600"
+        Height="450">
+
+    <Window.DataContext>
+        <vm:TwitchBotViewModel/>
+    </Window.DataContext>
+
+    <Grid ColumnDefinitions="1.25*, 2*"
+          RowDefinitions="160, 30, *"
+          Margin="10">
+
+        <Grid Grid.Column="0"
+              Grid.Row="0"
+              Margin="5"
+              ColumnDefinitions="*,*"
+              RowDefinitions="*,*">
+
+            <Button Grid.Column="0"
+                    Grid.Row="0"
+                    Margin="5"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    Content="Connect"
+                    Command="{Binding ConnectBotCommand}"/>
+
+            <Button Grid.Column="1"
+                    Grid.Row="0"
+                    Margin="5"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    Content="Disconnect"
+                    Command="{Binding DisconnectAsync}"/>
+
+            <Button Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Grid.Row="1"
+                    Margin="5"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    Content="Save Config"
+                    Command="{Binding saveConfigAsync}"/>
+
+		</Grid>
+
+        <StackPanel Grid.Column="1" 
+                    Grid.Row="0"
+                    Margin="5">
+            <TextBox Watermark="Channel to connect to" 
+                     ToolTip.Tip="The streamers username (all lowercase, unless you're absolutely sure it isn't)"
+                     Text="{Binding TwitchChatChannel}"/>
+            <TextBox Watermark="Bot username" ToolTip.Tip="All lowercase, unless you're absolutely sure it isn't, use the streamers username aka your own if you want that account to respond to commands"
+                     Text="{Binding TwitchUsername}"/>
+            <Border BorderThickness="1"
+                    BorderBrush="White"
+                    CornerRadius="3">
+                <Grid ColumnDefinitions="*, Auto">
+                    <TextBox Grid.Column="0"
+                             Watermark="AS2.info API key"
+                             PasswordChar="*"
+                             BorderThickness="0"
+                             Text="{Binding As2InfoKey}"/>
+                    <Button Grid.Column="1"
+                            Content="Get API Key"
+                            Command="{Binding GetAS2TokenAsync}"/>
+                </Grid>
+            </Border>
+            <Border BorderThickness="1"
+                    BorderBrush="White"
+                    CornerRadius="3">
+                <Grid ColumnDefinitions="*, Auto">
+                    <TextBox Grid.Column="0"
+                             Watermark="Access token"
+                             PasswordChar="*"
+                             BorderThickness="0"
+                             Text="{Binding TwitchAccessToken}"/>
+					<Button Grid.Column="1"
+                            Content="Get Token"
+                            Command="{Binding GetAccessTokenAsync}"/>
+				</Grid>
+            </Border>
+		</StackPanel>
+
+        <TextBlock Grid.Column="0"
+                   Grid.Row="1"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Text="Bot Log"
+                   TextDecorations="Underline"/>
+
+        <ItemsControl Grid.Column="0"
+                      Grid.Row="2"
+                      Margin="5"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="#ff2b2b2b"
+                      Items="{Binding TwitchResponses}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Margin="5"
+                               Text="{Binding}"
+                               TextWrapping="Wrap"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Grid.Column="1"
+                   Grid.Row="1"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Text="Upcoming Requests"
+                   TextDecorations="Underline"/>
+
+        <ListBox Grid.Column="1"
+                 Grid.Row="2"
+                 Margin="5"
+                 MinWidth="250"
+                 Items="{Binding SongRequests}"
+                 DoubleTapped="InputElement_OnDoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="models:RequestItem">
+                    <StackPanel Orientation="Vertical"
+                                HorizontalAlignment="Center">
+                        <TextBlock HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding Title}"/>
+                        <TextBlock HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   Text="{Binding Channel}"
+                                   FontSize="12"/>
+                        <TextBlock HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   Text="{Binding Duration}"
+                                   FontSize="10"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        
+    </Grid>
+</Window>
