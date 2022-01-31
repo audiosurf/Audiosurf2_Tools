@@ -1,0 +1,42 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Audiosurf2_Tools.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Audiosurf2_Tools.Controls.MoreFoldersControl">
+    
+    <UserControl.DataContext>
+        <viewModels:MoreFoldersViewModel/>
+    </UserControl.DataContext>
+    
+    <Grid ColumnDefinitions="*, 50">
+        
+        <ListBox Grid.Column="0"
+                 Margin="0,0,2.5,0"
+                 CornerRadius="3"
+                 Items="{Binding MoreFolders}"/>
+        
+        <StackPanel Grid.Column="1"
+                    Margin="2.5,0,0,0"
+                    HorizontalAlignment="Stretch"
+                    Orientation="Vertical">
+            
+            <Button HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center">
+                <Image Source="avares://Audiosurf2_Tools/Assets/addfolder.png"/>
+            </Button>
+            <Button HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center">
+                <Image Source="avares://Audiosurf2_Tools/Assets/refresh.png"/>
+            </Button>
+            <Button HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center">
+                <Image Source="avares://Audiosurf2_Tools/Assets/save.png"/>
+            </Button>
+            
+        </StackPanel>
+        
+    </Grid>
+    
+</UserControl>

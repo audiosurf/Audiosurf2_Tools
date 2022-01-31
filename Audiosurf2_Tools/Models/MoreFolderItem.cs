@@ -1,48 +1,18 @@
-﻿using System.Collections.ObjectModel;
-using System.Data;
-using System.Diagnostics.CodeAnalysis;
-using ReactiveUI;
+﻿using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 
 namespace Audiosurf2_Tools.Models;
 
 public class MoreFolderItem : ReactiveObject
 {
-    private string _name;
-    private string _path;
-    private bool _isEditing;
+    [Reactive]
+    public string Name { get; set; }
+    [Reactive]
+    public string Path { get; set; }
 
-    public string Name
+    public MoreFolderItem(string name, string path)
     {
-        get => _name;
-        set => this.RaiseAndSetIfChanged(ref _name, value);
+        Name = name;
+        Path = path;
     }
-
-    public string Path
-    {
-        get => _path;
-        set => this.RaiseAndSetIfChanged(ref _path, value);
-    }
-
-    public bool IsEditing
-    {
-        get => _isEditing;
-        set => this.RaiseAndSetIfChanged(ref _isEditing, value);
-    }
-
-    public ObservableCollection<MoreFolderItem> ParentCollection { get; set; }
-
-    public MoreFolderItem(string name, string path, ObservableCollection<MoreFolderItem> parentCollection, bool isEditing = false)
-    {
-        _name = name ?? throw new NoNullAllowedException();
-        _path = path ?? throw new NoNullAllowedException();
-        ParentCollection = parentCollection;
-        IsEditing = isEditing;
-    }
-
-    public void RemoveThis()
-    {
-        ParentCollection.Remove(this);
-    } 
-
-    
 }

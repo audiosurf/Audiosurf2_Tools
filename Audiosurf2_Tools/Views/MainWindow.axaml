@@ -3,149 +3,123 @@
         xmlns:vm="using:Audiosurf2_Tools.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="250"
+        xmlns:controls="clr-namespace:Audiosurf2_Tools.Controls"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Audiosurf2_Tools.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Audiosurf 2 Tools"
-        Height="250"
-        Width="500"
-        MinHeight="250"
-        MinWidth="300">
+        Title="Audiosurf2_Tools"
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="Default"
+        SystemDecorations="Full">
 
     <Design.DataContext>
-        <vm:MainWindowViewModel />
+        <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Grid ColumnDefinitions="*,*"
-          RowDefinitions="*,*">
-
-        <Button Grid.Column="0"
-                Grid.Row="0"
-                Margin="10, 10, 5, 5"
-                VerticalAlignment="Stretch"
-                HorizontalAlignment="Stretch"
-                BorderThickness="1"
-                BorderBrush="White"
-                Command="{Binding OpenInstallerWindow}"
-                CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
-            <StackPanel Orientation="Vertical"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                <Image Stretch="Uniform"
-                       Source="avares://Audiosurf2_Tools/Assets/install.png"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Height="50"/>
-                <TextBlock VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           Text="Installer"/>
-                <StackPanel VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            IsVisible="{Binding GamePatched}">
+    <SplitView VerticalAlignment="Stretch"
+               HorizontalAlignment="Stretch"
+               PanePlacement="Left"
+               CompactPaneLength="42.5" 
+               DisplayMode="CompactInline"
+               IsPaneOpen="{Binding OpenSidebar}"
+               OpenPaneLength="200">
+        <SplitView.Pane>
+            <StackPanel HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Orientation="Vertical"
+                        Spacing="10">
+                
+                <Button HorizontalAlignment="Left"
+                        CornerRadius="0"
+                        Background="Transparent"
+                        Command="{Binding OpenCloseSidebar}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <Image Source="avares://Audiosurf2_Tools/Assets/expand.png"
+                               Height="25"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button HorizontalAlignment="Stretch"
+                        CornerRadius="0"
+                        Background="{Binding InstallerHighlight}"
+                        Command="{Binding OpenInstaller}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <Image Source="avares://Audiosurf2_Tools/Assets/install.png"
+                               Height="25"/>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Installer"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button HorizontalAlignment="Stretch"
+                        CornerRadius="0"
+                        Background="{Binding MoreFoldersHighlight}"
+                        Command="{Binding OpenMoreFolders}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <Image Source="avares://Audiosurf2_Tools/Assets/folders.png"
+                               Height="25"/>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="More Folders"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button HorizontalAlignment="Stretch"
+                        CornerRadius="0"
+                        Background="{Binding PlaylistEditorHighlight}"
+                        Command="{Binding OpenPlaylistEditor}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <Image Source="avares://Audiosurf2_Tools/Assets/playlist.png"
+                               Height="25"/>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Playlist Editor"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button HorizontalAlignment="Stretch"
+                        Background="{Binding TwitchBotHighlight}"
+                        Command="{Binding OpenTwitchBot}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <Image Source="avares://Audiosurf2_Tools/Assets/twitch.png"
+                               Height="25"/>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Twitch Bot"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </SplitView.Pane>
+        
+        <SplitView.Content>
+            
+            <Grid RowDefinitions="50, *"
+                  Margin="10 ,0 ,10,10">
+                 
+                <StackPanel Grid.Row="0"
+                            VerticalAlignment="Center"
+                            Spacing="10">
                     <TextBlock VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               Text="Installed Ver.:"
-                               FontSize="12"/>
-                    <TextBlock VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               Text="{Binding GamePatchVersion}"
-                               FontSize="10"/>
+                               Text="Audiosurf 2 Tools"/>
+                    <Separator Background="#888888"
+                               Height="1"/>
                 </StackPanel>
-            </StackPanel>
-        </Button>
-
-        <Button Grid.Column="1"
-                Grid.Row="0"
-                Margin="5, 10, 10, 5"
-                VerticalAlignment="Stretch"
-                HorizontalAlignment="Stretch"
-                BorderThickness="1"
-                BorderBrush="White"
-                Command="{Binding OpenMoreFoldersWindow}"
-                CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"
-                IsEnabled="{Binding GamePatched}">
-            <StackPanel Orientation="Vertical"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                <Image Stretch="Uniform"
-                       Source="avares://Audiosurf2_Tools/Assets/folders.png"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Height="50"/>
-                <TextBlock VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           Text="More Folders"/>
-            </StackPanel>
-        </Button>
-
-        <Button Grid.Column="0"
-                Grid.Row="1"
-                Margin="10, 5, 5, 10"
-                VerticalAlignment="Stretch"
-                HorizontalAlignment="Stretch"
-                BorderThickness="1"
-                BorderBrush="White"
-                Command="{Binding OpenPlaylistEditorWindow}"
-                CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"
-                IsEnabled="{Binding GamePatched}">
-            <StackPanel Orientation="Vertical"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                <Image Stretch="Uniform"
-                       Source="avares://Audiosurf2_Tools/Assets/playlist.png"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Height="50"/>
-                <TextBlock VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           Text="Playlist Editor"/>
-            </StackPanel>
-        </Button>
-
-        <Button Grid.Column="1"
-                Grid.Row="1"
-                Margin="5, 5, 10, 10"
-                VerticalAlignment="Stretch"
-                HorizontalAlignment="Stretch"
-                BorderThickness="1"
-                BorderBrush="White"
-                Command="{Binding OpenTwitchBotWindow}"
-                CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"
-                IsEnabled="{Binding GamePatched}">
-            <StackPanel Orientation="Vertical"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                <Image Stretch="Uniform"
-                       Source="avares://Audiosurf2_Tools/Assets/twitch.png"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Height="50"/>
-                <TextBlock VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           Text="Twitch Bot"/>
-            </StackPanel>
-        </Button>
-
-        <Border Grid.Column="0"
-                Grid.ColumnSpan="2"
-                Grid.Row="0"
-                Grid.RowSpan="2"
-                Background="#d0000000"
-                IsVisible="{Binding IsInitializing}">
-            <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Center">
-                <ProgressRing Margin="5"
-                              IsIndeterminate="True"/>
-                <TextBlock Margin="5"
-                           Text="{Binding InitStatusText}"/>
-            </StackPanel>
-        </Border>
-    </Grid>
-
+                 
+                <controls:MoreFoldersControl Grid.Row="1"
+                                             DataContext="{Binding MoreFoldersViewModel}"
+                                             IsVisible="{Binding IsOpen}"/>
+                
+                <controls:TwitchBotControl Grid.Row="1"
+                                           DataContext="{Binding TwitchBotViewModel}"
+                                           IsVisible="{Binding IsOpen}"/>
+                 
+            </Grid>
+            
+        </SplitView.Content>
+        
+    </SplitView>
+    
 </Window>

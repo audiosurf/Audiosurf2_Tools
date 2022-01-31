@@ -39,7 +39,7 @@
                 Command="{Binding MoveUp}">
             <Image VerticalAlignment="Center"
                    HorizontalAlignment="Center"
-                   Source="avares://Audiosurf2_Tools/Assets/arrowup.png"/>
+                   Source="avares://Audiosurf2_ToolsOld/Assets/arrowup.png"/>
         </Button>
         <Button Grid.Column="2"
                 Grid.Row="1"
@@ -51,7 +51,7 @@
                 Command="{Binding MoveDown}">
             <Image VerticalAlignment="Center"
                    HorizontalAlignment="Center"
-                   Source="avares://Audiosurf2_Tools/Assets/arrowdown.png"/>
+                   Source="avares://Audiosurf2_ToolsOld/Assets/arrowdown.png"/>
         </Button>
 
         <Button Grid.Column="3"
@@ -67,7 +67,7 @@
             <Image HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    Height="20"
-                   Source="avares://Audiosurf2_Tools/Assets/delete.png"/>
+                   Source="avares://Audiosurf2_ToolsOld/Assets/delete.png"/>
         </Button>
 
 	</Grid>

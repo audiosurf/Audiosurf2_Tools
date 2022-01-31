@@ -1,0 +1,42 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Audiosurf2_Tools.ViewModels"
+             xmlns:miniControls="clr-namespace:Audiosurf2_Tools.MiniControls"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="450"
+             x:Class="Audiosurf2_Tools.Controls.TwitchBotSetupControl">
+    
+    <UserControl.DataContext>
+        <viewModels:TwitchBotSetupViewModel/>
+    </UserControl.DataContext>
+    
+    <Grid RowDefinitions="*,*,*,*" VerticalAlignment="Center"
+          HorizontalAlignment="Stretch"
+          MaxWidth="500">
+        <miniControls:BotSetupStep Grid.Row="0"
+                                   HelpText="Help me"
+                                   IsDone="True"
+                                   ResultValue="Wow"
+                                   Status="Wow this is some text"/>
+        <miniControls:BotSetupStep Grid.Row="1"
+                                   HelpText="Help me"
+                                   IsDone="True"
+                                   IsEditing="True"
+                                   ResultValue="Wow"
+                                   Status="Wow this is some other text"/>
+        <miniControls:BotSetupStepExtra Grid.Row="2"
+                                   HelpText="Help me"
+                                   IsEditing="True"
+                                   IsDone="True"
+                                   ResultValue="Wow"
+                                   Status="Wow this is some more text"/>
+        <miniControls:BotSetupStepExtra Grid.Row="3"
+                                   HelpText="Help me"
+                                   IsEditing="False"
+                                   IsDone="True"
+                                   ResultValue="Wow"
+                                   Status="Wow this is some wild text"/>
+    </Grid>
+    
+</UserControl>

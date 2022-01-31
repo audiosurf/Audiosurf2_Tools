@@ -1,75 +1,46 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Audiosurf2_Tools.Models;
-using ReactiveUI;
+using Microsoft.Win32;
+using ReactiveUI.Fody.Helpers;
 
 namespace Audiosurf2_Tools.ViewModels;
 
 public class MoreFoldersViewModel : ViewModelBase
 {
-    private ObservableCollection<MoreFolderItem> _moreFolders;
-    private bool _isInitializing = true;
-
-    public string GamePath { get; init; }
-
-    public ObservableCollection<MoreFolderItem> MoreFolders
-    {
-        get => _moreFolders;
-        set => this.RaiseAndSetIfChanged(ref _moreFolders, value);
-    }
-
-    public bool IsInitializing
-    {
-        get => _isInitializing;
-        set => this.RaiseAndSetIfChanged(ref _isInitializing, value);
-    }
+    [Reactive] public bool IsOpen { get; set; } = false;
+    [Reactive] public ObservableCollection<MoreFolderItem> MoreFolders { get; set; }
 
     public MoreFoldersViewModel()
     {
-        _moreFolders = new();
-        _ = Task.Run(LoadMoreFoldersAsync);
+        MoreFolders = new();
+        _ = Task.Run(_loadMoreFolderItems);
     }
 
-    public async Task LoadMoreFoldersAsync()
+    private async Task _loadMoreFolderItems()
     {
-        IsInitializing = true;
-        await Task.Delay(1000);
-        _moreFolders.Clear();
-        var file = await File.ReadAllLinesAsync(Path.Combine(GamePath, "MoreFolders.txt"));
-        var names = file.Where(x => x.StartsWith("name")).ToArray();
-        var paths = file.Where(x => x.StartsWith("path")).ToArray();
+        var gameDir = await ToolUtils.GetGameDirectoryAsync();
+        if (string.IsNullOrWhiteSpace(gameDir))
+            return;
+        if (!File.Exists(Path.Combine(gameDir, "MoreFolders.txt")))
+            return;
+
+        MoreFolders.Clear();
+        var lines = await File.ReadAllLinesAsync(Path.Combine(gameDir, "MoreFolders.txt"));
+        var names = lines.Where(x => x.StartsWith("name=")).ToArray();
+        var paths = lines.Where(x => x.StartsWith("path=")).ToArray();
+        if (names.Length != paths.Length)
+            return;
         for (int i = 0; i < names.Length; i++)
         {
-            await Task.Delay(200);
-            MoreFolders.Add(new MoreFolderItem(names[i].Replace("name=", ""), paths[i].Replace("path=", ""),
-                MoreFolders));
+            var name = names[i].Substring(5);
+            var path = paths[i].Substring(5).Replace('/', '\\');
+            MoreFolders.Add(new(name, path));
         }
-
-        await Task.Delay(1000);
-        IsInitializing = false;
-    }
-
-    public void AddFolder()
-    {
-        MoreFolders.Add(new ("", "", MoreFolders, true));
-    }
-
-    public async Task SaveMoreFoldersAsync()
-    {
-        var titles = MoreFolders.Select(x => x.Name).ToArray();
-        var paths = MoreFolders.Select(x => x.Path).ToArray();
-        File.Delete(Path.Combine(GamePath, "MoreFolders.txt"));
-        using (var fw = File.CreateText(Path.Combine(GamePath, "MoreFolders.txt")))
-        {
-            for (int i = 0; i < titles.Length; i++)
-            {
-                await fw.WriteLineAsync($"name={titles[i]}");
-                await fw.WriteLineAsync($"path={paths[i]}");
-            }
-        }
-
-        await LoadMoreFoldersAsync();
     }
 }
