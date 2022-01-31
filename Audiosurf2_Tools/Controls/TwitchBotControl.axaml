@@ -13,7 +13,10 @@
     
     <Grid HorizontalAlignment="Stretch"
           VerticalAlignment="Center">
-        <controls:TwitchBotSetupControl DataContext="{Binding TwitchBotSetupViewModel}"/>
+        <controls:TwitchBotSetupControl DataContext="{Binding TwitchBotSetupViewModel}"
+                                        IsVisible="False"/>
+        <Button Content="WAAAA"
+                Command="{Binding Test}"/>
     </Grid>
     
 </UserControl>

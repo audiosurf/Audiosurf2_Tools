@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
 using ReactiveUI.Fody.Helpers;
 using Timer = System.Timers.Timer;
@@ -71,7 +70,7 @@ public class TwitchBotSetupViewModel : ViewModelBase
             AS2InfoKey = InputValue;
             InputValue = "";
             InputWatermark = "Enter your Twitch OAuth token";
-            ExternalUrl = "https://id.twitch.tv/oauth2/authorize?client_id=ff9dg7h1dibw47gvj9y2y5brqo0edt&redirect_uri=http%3A%2F%2Flocalhost%3A8888&response_type=code&scope=chat:read%20chat:edit";
+            ExternalUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=ff9dg7h1dibw47gvj9y2y5brqo0edt&redirect_uri=http%3A%2F%2Flocalhost%3A8888&scope=chat:read%20chat:edit";
             DoneAS2InfoKey = false;
             TwitchTokenOp = 1;
             return;
@@ -102,9 +101,9 @@ public class TwitchBotSetupViewModel : ViewModelBase
             try
             {
                 await TwitchAuthUtil.DoOAuthFlowAsync(ExternalUrl);
-                if (!string.IsNullOrWhiteSpace(TwitchAuthUtil.CurrentAuth.AccessToken))
+                if (!string.IsNullOrWhiteSpace(TwitchAuthUtil.OAuthToken))
                 {
-                    InputValue = TwitchAuthUtil.CurrentAuth.AccessToken;
+                    InputValue = TwitchAuthUtil.OAuthToken;
                     EnterInput();
                 }
             }

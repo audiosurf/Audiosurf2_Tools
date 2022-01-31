@@ -21,10 +21,8 @@ public class TwitchAuthUtil : ReactiveObject
     private CancellationTokenSource _timeOutCTS { get; set; } = new ();
     private Timer _timeOut { get; set; } = new ();
     private DateTime _currentFullTime { get; set; } = DateTime.Now;
-
-    public TwAuth CurrentAuth { get; set; } = new TwAuth();
-
     [Reactive] public TimeSpan? CurrentTime { get; set; }
+    [Reactive] public string OAuthToken { get; set; }
 
     public TwitchAuthUtil()
     {
@@ -63,28 +61,37 @@ public class TwitchAuthUtil : ReactiveObject
     public async Task DoOAuthFlowAsync(string url)
     {
         _listener.Prefixes.Add("http://localhost:8888/");
-        string code = "";
         try
         {
             _listener.Start();
             _timeOut.Start();
             _currentFullTime = DateTime.Now;
             CurrentTime = TimeSpan.FromMinutes(3);
+            
+            Process.Start(new ProcessStartInfo(url)
+            { 
+                UseShellExecute = true, 
+                Verb = "open" 
+            }); 
             while (_listener.IsListening)
             {
-                Process.Start(new ProcessStartInfo(url)
-                { 
-                    UseShellExecute = true, 
-                    Verb = "open" 
-                }); 
                 var context = await Task.Run(_listener.GetContextAsync, _timeOutCTS.Token);
                 var query = context?.Request.Url!.Query;
-                if (!query!.Contains("error"))
+                if (string.IsNullOrWhiteSpace(context?.Request.Url!.Query))
                 {
-                    code = query.Replace("?code=", "");
-                    code = code.Split('&')[0];
+                    string responseString = Consts.GetTokenHtml;
+                    byte[] buffer = Encoding.UTF8.GetBytes(responseString);
                     
-                    string responseString = "<HTML><BODY> You can close this :)</BODY></HTML>";
+                    context!.Response.ContentLength64 = buffer.Length;
+                    Stream output = context.Response.OutputStream;
+                    await output.WriteAsync(buffer,0,buffer.Length);
+                    output.Close();
+                }
+                else if (context?.Request.Url!.Query.Contains("access_token") == true)
+                {
+                    var raw = context?.Request.Url!.Query.Replace("?access_token=", "");
+                    OAuthToken = raw!.Split('&', StringSplitOptions.RemoveEmptyEntries)[0];
+                    string responseString = Consts.CloseWindowHtml;
                     byte[] buffer = Encoding.UTF8.GetBytes(responseString);
                     
                     context!.Response.ContentLength64 = buffer.Length;
@@ -93,34 +100,25 @@ public class TwitchAuthUtil : ReactiveObject
                     output.Close();
                     break;
                 }
+                else
+                {
+                    Process.Start(new ProcessStartInfo(url)
+                    { 
+                        UseShellExecute = true, 
+                        Verb = "open" 
+                    }); 
+                }
                 
                 _currentFullTime = DateTime.Now;
                 CurrentTime = TimeSpan.FromMinutes(3);
             }
             _timeOut.Stop();
-            if (string.IsNullOrWhiteSpace(code))
-                return;
-            _listener.Stop();;
-            this.CurrentAuth = await GetOuthTokenAsync(code) ?? new TwAuth();
+            _listener.Stop();
         }
         catch (Exception e)
         {
             _listener.Stop();;
             Console.WriteLine(e);
         }
-    }
-
-    public async Task<TwAuth?> GetOuthTokenAsync(string code)
-    {
-        //Idk about this
-        using var msg = new HttpRequestMessage(HttpMethod.Post,
-            "https://id.twitch.tv/oauth2/token?client_id=ff9dg7h1dibw47gvj9y2y5brqo0edt" +
-            "&client_secret=" +
-            $"&code={code}" +
-            "&grant_type=authorization_code" +
-            "&redirect_uri=http://localhost:8888");
-        var resp = await _client.SendAsync(msg);
-        var data = await resp.Content.ReadAsStringAsync();
-        return JsonSerializer.Deserialize<TwAuth>(data);
     }
 }
