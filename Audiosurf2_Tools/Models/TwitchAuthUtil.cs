@@ -102,11 +102,7 @@ public class TwitchAuthUtil : ReactiveObject
                 }
                 else
                 {
-                    Process.Start(new ProcessStartInfo(url)
-                    { 
-                        UseShellExecute = true, 
-                        Verb = "open" 
-                    }); 
+                    break;
                 }
                 
                 _currentFullTime = DateTime.Now;

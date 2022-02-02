@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 using Timer = System.Timers.Timer;
 
@@ -14,125 +20,131 @@ namespace Audiosurf2_Tools.ViewModels;
 
 public class TwitchBotSetupViewModel : ViewModelBase
 {
-    [Reactive] public string ChatChannel { get; set; } = "";
-    [Reactive] public bool DoneChatChannel { get; set; } = true;
-    [Reactive] public double ChatChannelOp { get; set; } = 1;
-    [Reactive] public string BotUsername { get; set; } = "";
-    [Reactive] public bool DoneBotUsername { get; set; } = true;
-    [Reactive] public double BotUsernameOp { get; set; } = 0.5;
-    [Reactive] public string AS2InfoKey { get; set; } = "";
-    [Reactive] public bool DoneAS2InfoKey { get; set; } = true; 
-    [Reactive] public double AS2InfoKeyOp { get; set; } = 0.5;
-    [Reactive] public string TwitchToken { get; set; } = "";
-    [Reactive] public bool DoneTwitchToken { get; set; } = true;
-    [Reactive] public double TwitchTokenOp { get; set; } = 0.5;
-
-    [Reactive] public string InputWatermark { get; set; }
-    [Reactive] public string InputValue { get; set; } = "";
-    [Reactive] public string ExternalUrl { get; set; } = "";
-    [Reactive] public bool UseExtendedInput { get; set; } = false;
-
+    //https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=ff9dg7h1dibw47gvj9y2y5brqo0edt&redirect_uri=http%3A%2F%2Flocalhost%3A8888&scope=chat:read%20chat:edit
+    //https://audiosurf2.info/user/settings
+    [Reactive] public bool IsSetupOpen { get; set; }
+    
+    [Reactive] public string ChatChannelInput { get; set; }
+    [Reactive] public string ChatChannelResult { get; set; }
+    [Reactive] public bool ChatChannelDone{ get; set; }
+    [Reactive] public bool ChatChannelEditing { get; set; }
+    [Reactive] public string BotUsernameInput { get; set; }
+    [Reactive] public string BotUsernameResult { get; set; }
+    [Reactive] public bool BotUsernameDone{ get; set; }
+    [Reactive] public bool BotUsernameEditing { get; set; }
+    [Reactive] public string TwitchTokenInput { get; set; }
+    [Reactive] public string TwitchTokenResult { get; set; }
+    [Reactive] public bool TwitchTokenDone{ get; set; }
+    [Reactive] public bool TwitchTokenEditing { get; set; }
+    [Reactive] public string AS2LocationInput { get; set; }
+    [Reactive] public string AS2LocationResult { get; set; }
+    [Reactive] public bool AS2LocationDone{ get; set; }
+    [Reactive] public bool AS2LocationEditing { get; set; }
+    
     [Reactive] public TwitchAuthUtil TwitchAuthUtil { get; set; } = new();
 
     public TwitchBotSetupViewModel()
     {
-        InputWatermark = "Enter the streamers channel name (lowercase)";
+        ChatChannelEditing = true;
+        this.WhenAny(x => x.ChatChannelDone, 
+            x => x.BotUsernameDone,
+            x => x.TwitchTokenDone, 
+            x => x.AS2LocationDone,
+            (x, y, z, a) 
+                => IsSetupOpen = !(x.Value && y.Value && z.Value && a.Value)) //idk it just works™
+            .Subscribe((a) => IsSetupOpen = a);
     }
 
-    public void EnterInput()
+    public void EnterChannelName()
     {
-        if (string.IsNullOrWhiteSpace(InputValue))
-            return;
-        if (string.IsNullOrWhiteSpace(ChatChannel))
+        if (!string.IsNullOrWhiteSpace(ChatChannelInput))
         {
-            UseExtendedInput = false;
-            ChatChannel = InputValue;
-            InputValue = "";
-            InputWatermark = "Enter the bots twitch username (lowercase)";
-            DoneChatChannel = false;
-            BotUsernameOp = 1;
-            return;
+            ChatChannelResult = ChatChannelInput;
+            ChatChannelDone = true;
+            ChatChannelEditing = false;
+            BotUsernameEditing = true;
         }
-        if (string.IsNullOrWhiteSpace(BotUsername))
+    }
+    
+    public void EnterBotUsername()
+    {
+        if (!string.IsNullOrWhiteSpace(BotUsernameInput))
         {
-            UseExtendedInput = true;
-            BotUsername = InputValue;
-            InputValue = "";
-            InputWatermark = "Enter your AS2.info API key";
-            ExternalUrl = "https://audiosurf2.info/user/settings";
-            DoneBotUsername = false;
-            AS2InfoKeyOp = 1;
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(AS2InfoKey))
-        {
-            UseExtendedInput = true;
-            AS2InfoKey = InputValue;
-            InputValue = "";
-            InputWatermark = "Enter your Twitch OAuth token";
-            ExternalUrl = "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=ff9dg7h1dibw47gvj9y2y5brqo0edt&redirect_uri=http%3A%2F%2Flocalhost%3A8888&scope=chat:read%20chat:edit";
-            DoneAS2InfoKey = false;
-            TwitchTokenOp = 1;
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(TwitchToken))
-        {
-            UseExtendedInput = true;
-            TwitchToken = InputValue;
-            InputValue = "";
-            InputWatermark = "";
-            DoneTwitchToken = false;
-            TwitchAuthUtil.TryStop();
+            BotUsernameResult = BotUsernameInput;
+            BotUsernameDone = true;
+            BotUsernameEditing = false;
+            TwitchTokenEditing = true;
         }
     }
 
-    public async Task OpenExternal()
+    public async Task EnterTwitchToken()
     {
-        if (!ExternalUrl.Contains("twitch"))
+        await Task.Delay(1);
+        if (!string.IsNullOrWhiteSpace(TwitchTokenInput))
         {
-            Process.Start(new ProcessStartInfo(ExternalUrl)
-            { 
-                UseShellExecute = true, 
-                Verb = "open" 
-            }); 
-        }
-        else
-        {
-            try
+            //verify or something
+            if (!TwitchTokenInput.StartsWith("oauth:"))
+                TwitchTokenInput = "oauth:" + TwitchTokenInput;
+            TwitchTokenResult = TwitchTokenInput;
+            TwitchTokenDone = true;
+            TwitchTokenEditing = false;
+            AS2LocationEditing = true;
+            _ = Task.Run(async () =>
             {
-                await TwitchAuthUtil.DoOAuthFlowAsync(ExternalUrl);
-                if (!string.IsNullOrWhiteSpace(TwitchAuthUtil.OAuthToken))
-                {
-                    InputValue = TwitchAuthUtil.OAuthToken;
-                    EnterInput();
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+                var dir = await ToolUtils.GetGameDirectoryAsync();
+                AS2LocationInput = dir;
+            });
         }
     }
-
-    public void StartOver()
+    
+    public async Task AutoTwitchToken()
     {
-        InputWatermark = "Enter the streamers channel name (lowercase)";
-        InputValue = "";
-        ExternalUrl = "";
-        TwitchAuthUtil = new();
-        UseExtendedInput = false;
-        ChatChannel = "";
-        ChatChannelOp = 1;
-        DoneChatChannel = true;
-        BotUsername = "";
-        BotUsernameOp = 0.5;
-        DoneBotUsername = true;
-        AS2InfoKey = "";
-        AS2InfoKeyOp = 0.5;
-        DoneAS2InfoKey = true;
-        TwitchToken = "";
-        TwitchTokenOp = 0.5;
-        DoneTwitchToken = true;
+        await TwitchAuthUtil.DoOAuthFlowAsync(
+            "https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=ff9dg7h1dibw47gvj9y2y5brqo0edt&redirect_uri=http%3A%2F%2Flocalhost%3A8888&scope=chat:read%20chat:edit");
+        if (string.IsNullOrWhiteSpace(TwitchAuthUtil.OAuthToken))
+        {
+            TwitchAuthUtil = new();
+            return;
+        }
+
+        TwitchTokenInput = TwitchAuthUtil.OAuthToken;
+        await EnterTwitchToken();
+    }
+    
+    public async Task EnterAS2Location()
+    {
+        await Task.Delay(1);
+        if (!string.IsNullOrWhiteSpace(AS2LocationInput))
+        {
+            AS2LocationResult = AS2LocationInput;
+            AS2LocationDone = true;
+            AS2LocationEditing = false;
+            _ = Task.Run(saveConfig);
+        }
+    }
+    
+    public async Task BrowseAS2Location()
+    {
+        var openFolder = new OpenFolderDialog()
+        {
+            Directory = "C:\\"
+        };
+        var dir = await openFolder.ShowAsync(((ClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).MainWindow);
+        AS2LocationInput = dir ?? "";
+    }
+
+    private async Task saveConfig()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var settings = new TwitchSettings()
+        {
+            ChatChannel = ChatChannelResult,
+            BotUsername = BotUsernameResult,
+            TwitchToken = TwitchTokenResult,
+            AS2Location = AS2LocationResult
+        };
+        var text = JsonSerializer.Serialize(settings);
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"), text);
     }
 
 }

@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 
 namespace Audiosurf2_Tools.MiniControls;
 
@@ -86,14 +87,22 @@ public class BotSetupStep : UserControl
     {
         var wnd = new Window()
         {
-            SizeToContent = SizeToContent.WidthAndHeight,
+            SizeToContent = SizeToContent.Height,
+            Width = 300,
+            SystemDecorations = SystemDecorations.None,
             Content = new TextBlock()
             {
                 Text = HelpText,
+                Margin = new Thickness(15),
+                MaxWidth = 250,
+                TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center
-            }
+            },
+            Position = this.PointToScreen(this.Bounds.Center)
         };
+        wnd.Tapped += (sender, args) => ((Window) sender!).Close(); 
+        wnd.LostFocus += (sender, args) => ((Window) sender!).Close();
         wnd.Show();
     }
     

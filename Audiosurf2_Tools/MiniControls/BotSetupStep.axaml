@@ -3,12 +3,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="80"
-             x:Class="Audiosurf2_Tools.MiniControls.BotSetupStep"
-             DataContext="{Binding RelativeSource={RelativeSource Mode=Self}}">
+             x:Class="Audiosurf2_Tools.MiniControls.BotSetupStep">
     
-    <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+    <Grid ColumnDefinitions="2*,*,Auto,Auto,Auto"
           RowDefinitions="*,Auto"
-          ShowGridLines="True">
+          DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}}">
         
         <TextBlock Grid.Column="0"
                    Grid.Row="0"
@@ -17,11 +16,14 @@
                    Text="{Binding Status}"/>
         
         <TextBlock Grid.Column="1"
+                   Grid.ColumnSpan="2"
                    Grid.Row="0"
+                   Margin="5,0"
                    VerticalAlignment="Center"
+                   TextAlignment="Right"
                    Text="{Binding ResultValue}"/>
         
-        <Image Grid.Column="2"
+        <Image Grid.Column="3"
                Grid.Row="0"
                IsVisible="{Binding IsDone}"
                Margin="5"
@@ -29,7 +31,7 @@
                Width="20"
                Source="avares://Audiosurf2_Tools/Assets/checkmark.png"/>
         
-        <ProgressRing Grid.Column="2"
+        <ProgressRing Grid.Column="3"
                       Grid.Row="0"
                       Margin="5"
                       Height="20"
@@ -39,7 +41,7 @@
                       ForegroundColor="Orange"
                       IsIndeterminate="True"/>
         
-        <Button Grid.Column="3"
+        <Button Grid.Column="4"
                 Grid.Row="0"
                 Margin="5,5"
                 HorizontalAlignment="Center"
@@ -48,13 +50,14 @@
                 Content="?"/>
         
         <TextBox Grid.Column="0"
+                 Grid.ColumnSpan="2"
                  Grid.Row="1"
                  IsVisible="{Binding IsEditing}"
                  Margin="5,5"
                  VerticalAlignment="Center"
                  Text="{Binding InputValue}"/>
         
-        <Button Grid.Column="1"
+        <Button Grid.Column="2"
                 Grid.ColumnSpan="3"
                 Grid.Row="1"
                 HorizontalAlignment="Stretch"

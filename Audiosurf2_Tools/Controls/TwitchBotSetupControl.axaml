@@ -11,32 +11,49 @@
         <viewModels:TwitchBotSetupViewModel/>
     </UserControl.DataContext>
     
-    <Grid RowDefinitions="*,*,*,*" VerticalAlignment="Center"
+    <Grid RowDefinitions="*,*,*,*"
+          VerticalAlignment="Center"
           HorizontalAlignment="Stretch"
           MaxWidth="500">
+        
         <miniControls:BotSetupStep Grid.Row="0"
-                                   HelpText="Help me"
-                                   IsDone="True"
-                                   ResultValue="Wow"
-                                   Status="Wow this is some text"/>
+                                   Status="Streamers Channel Name"
+                                   HelpText="Enter the username of the streamer (probably you) who's chat you'd like to use this for. The username is always lowercase!"
+                                   ResultValue="{Binding ChatChannelResult}"
+                                   InputValue="{Binding ChatChannelInput, Mode=TwoWay}"
+                                   IsDone="{Binding ChatChannelDone}"
+                                   IsEditing="{Binding ChatChannelEditing}"
+                                   ConfirmCommand="{Binding EnterChannelName}"/>
+        
         <miniControls:BotSetupStep Grid.Row="1"
-                                   HelpText="Help me"
-                                   IsDone="True"
-                                   IsEditing="True"
-                                   ResultValue="Wow"
-                                   Status="Wow this is some other text"/>
+                                   Status="Bot Username"
+                                   HelpText="Enter the username of the bot account. Should always be lowercase"
+                                   ResultValue="{Binding BotUsernameResult}"
+                                   InputValue="{Binding BotUsernameInput, Mode=TwoWay}"
+                                   IsDone="{Binding BotUsernameDone}"
+                                   IsEditing="{Binding BotUsernameEditing}"
+                                   ConfirmCommand="{Binding EnterBotUsername}"/>
+        
         <miniControls:BotSetupStepExtra Grid.Row="2"
-                                   HelpText="Help me"
-                                   IsEditing="True"
-                                   IsDone="True"
-                                   ResultValue="Wow"
-                                   Status="Wow this is some more text"/>
+                                        Status="Twitch Chat Token"
+                                        HelpText="Enter the OAuth token for the Bot account(!). You can get it automatically by using the '...' button."
+                                        ResultValue="{Binding TwitchAuthUtil.CurrentTime, StringFormat=\{0:mm\\:ss\}}"
+                                        InputValue="{Binding TwitchTokenInput, Mode=TwoWay}"
+                                        IsDone="{Binding TwitchTokenDone}"
+                                        IsEditing="{Binding TwitchTokenEditing}"
+                                        ConfirmCommand="{Binding EnterTwitchToken}"
+                                        ExtraCommand="{Binding AutoTwitchToken}"/>
+        
         <miniControls:BotSetupStepExtra Grid.Row="3"
-                                   HelpText="Help me"
-                                   IsEditing="False"
-                                   IsDone="True"
-                                   ResultValue="Wow"
-                                   Status="Wow this is some wild text"/>
+                                        Status="Audiosurf 2 Location"
+                                        HelpText="Use the '...' to Browse for the folder if the found location isn't correct"
+                                        ResultValue="{Binding AS2LocationResult}"
+                                        InputValue="{Binding AS2LocationInput, Mode=TwoWay}"
+                                        IsDone="{Binding AS2LocationDone}"
+                                        IsEditing="{Binding AS2LocationEditing}"
+                                        ConfirmCommand="{Binding EnterAS2Location}"
+                                        ExtraCommand="{Binding BrowseAS2Location}"/>
+        
     </Grid>
     
 </UserControl>

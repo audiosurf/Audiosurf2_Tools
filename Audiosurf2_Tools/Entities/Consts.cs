@@ -1,7 +1,11 @@
-﻿namespace Audiosurf2_Tools.Entities;
+﻿using YoutubeExplode;
+
+namespace Audiosurf2_Tools.Entities;
 
 public class Consts
 {
+    public static YoutubeClient YoutubeClient = new();
+    
     public static string GetTokenHtml = @"
     <HTML>
         <HEAD>
