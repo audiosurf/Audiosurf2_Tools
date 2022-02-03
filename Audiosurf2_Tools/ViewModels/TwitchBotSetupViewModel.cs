@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
-using System.Net;
-using System.Net.Http;
+using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
 using Avalonia;
@@ -14,7 +11,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
-using Timer = System.Timers.Timer;
 
 namespace Audiosurf2_Tools.ViewModels;
 
@@ -145,6 +141,22 @@ public class TwitchBotSetupViewModel : ViewModelBase
         };
         var text = JsonSerializer.Serialize(settings);
         await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"), text);
+        if (File.Exists(Path.Combine(settings.AS2Location, "MoreFolders.json")))
+        {
+            var lines = await File.ReadAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"));
+            var obj = JsonSerializer.Deserialize<List<RawMoreFolderItem>>(lines);
+            if (obj == null || obj.Any(x => x.Path == Path.Combine(appdata, "AS2Tools")))
+                return;
+            
+            obj.Add(new RawMoreFolderItem
+            {
+                Name ="Twitch Bot Requests",
+                Path = Path.Combine(appdata, "AS2Tools"),
+                Position = 6
+            });
+            lines = JsonSerializer.Serialize(obj);
+            await File.WriteAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"), lines);
+        }
     }
 
 }

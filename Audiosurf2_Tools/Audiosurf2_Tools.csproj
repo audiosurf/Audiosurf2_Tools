@@ -3,6 +3,8 @@
         <OutputType>WinExe</OutputType>
         <TargetFramework>net6.0-windows</TargetFramework>
         <Nullable>enable</Nullable>
+        <TrimMode>copyused</TrimMode>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     </PropertyGroup>
     <ItemGroup>
         <Folder Include="Models\" />
@@ -24,11 +26,5 @@
         <PackageReference Include="System.Data.SQLite" Version="1.0.115.5" />
         <PackageReference Include="TwitchLib" Version="3.3.0" />
         <PackageReference Include="YoutubeExplode" Version="6.0.7" />
-    </ItemGroup>
-    <ItemGroup>
-      <Compile Update="MiniControls\BotSetupStepExtra.axaml.cs">
-        <DependentUpon>BotSetupStepExtra.axaml</DependentUpon>
-        <SubType>Code</SubType>
-      </Compile>
     </ItemGroup>
 </Project>

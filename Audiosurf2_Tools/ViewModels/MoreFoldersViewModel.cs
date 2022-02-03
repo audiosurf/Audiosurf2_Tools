@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Audiosurf2_Tools.Models;
-using Microsoft.Win32;
 using ReactiveUI.Fody.Helpers;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Audiosurf2_Tools.ViewModels;
 
@@ -27,20 +24,14 @@ public class MoreFoldersViewModel : ViewModelBase
         var gameDir = await ToolUtils.GetGameDirectoryAsync();
         if (string.IsNullOrWhiteSpace(gameDir))
             return;
-        if (!File.Exists(Path.Combine(gameDir, "MoreFolders.txt")))
+        if (!File.Exists(Path.Combine(gameDir, "MoreFolders.json")))
             return;
 
         MoreFolders.Clear();
-        var lines = await File.ReadAllLinesAsync(Path.Combine(gameDir, "MoreFolders.txt"));
-        var names = lines.Where(x => x.StartsWith("name=")).ToArray();
-        var paths = lines.Where(x => x.StartsWith("path=")).ToArray();
-        if (names.Length != paths.Length)
+        var lines = await File.ReadAllTextAsync(Path.Combine(gameDir, "MoreFolders.json"));
+        var obj = JsonSerializer.Deserialize<List<MoreFolderItem>>(lines);
+        if (obj == null)
             return;
-        for (int i = 0; i < names.Length; i++)
-        {
-            var name = names[i].Substring(5);
-            var path = paths[i].Substring(5).Replace('/', '\\');
-            MoreFolders.Add(new(name, path));
-        }
+        MoreFolders = new (obj);
     }
 }

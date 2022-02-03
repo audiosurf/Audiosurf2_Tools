@@ -1,0 +1,49 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="clr-namespace:Audiosurf2_Tools.Models"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="150"
+             x:Class="Audiosurf2_Tools.MiniControls.RequestItemControl">
+    
+    <UserControl.DataContext>
+        <models:TwitchRequestItem/>    
+    </UserControl.DataContext>
+    
+    <Grid ColumnDefinitions="*,150"
+          RowDefinitions="Auto,Auto,Auto"
+          Margin="10">
+        <TextBlock Grid.Column="0"
+                   Grid.Row="0"
+                   TextWrapping="Wrap"
+                   Text="{Binding Title}"/>
+        <TextBlock Grid.Column="0"
+                   Grid.Row="1"
+                   TextWrapping="Wrap"
+                   Text="{Binding Channel}"/>
+        <TextBlock Grid.Column="0"
+                   Grid.Row="2"
+                   TextWrapping="Wrap"
+                   Text="{Binding Duration, StringFormat=\{0:mm\\:ss\}}"/>
+                    
+        <Button Grid.Column="1"
+                Grid.Row="0"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Content="Open in Browser"
+                Command="{Binding OpenLocation}"/>
+        
+        <Button Grid.Column="1"
+                Grid.Row="1"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Background="#662222"
+                Content="Remove"
+                Command="{Binding Remove}"/>
+                    
+        <TextBlock Grid.Column="1"
+                   Grid.Row="2"
+                   Text="{Binding Requester}"/>
+    </Grid>
+    
+</UserControl>

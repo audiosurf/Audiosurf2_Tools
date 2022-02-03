@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+using Audiosurf2_Tools.Models;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -15,6 +17,7 @@ namespace Audiosurf2_Tools
 
         public override void OnFrameworkInitializationCompleted()
         {
+            _ = Task.Run(GlobalSettings.InitSettingsAsync);
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindow
