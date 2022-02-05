@@ -38,16 +38,10 @@ public class TwitchBotControl : UserControl
         {
             ParentCollection = context.Requests
         };
-        var control = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = popOut
-        };
         var wnd = new Window
         {
             Title = "Requests PopOut",
-            Content = control,
+            Content = popOut,
             DataContext = new TwitchPopOutViewModel(),
             Height = cfg.Height,
             Width = cfg.Width

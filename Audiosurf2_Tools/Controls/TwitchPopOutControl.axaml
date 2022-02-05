@@ -44,7 +44,7 @@
 
         <ScrollViewer Grid.Row="1"
                       Margin="10"
-                      VerticalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollBarVisibility="Disabled">
 
             <ItemsControl CornerRadius="3"
