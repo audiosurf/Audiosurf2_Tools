@@ -21,6 +21,8 @@ public class Globals
     public static async Task InitSettingsAsync()
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!Directory.Exists(Path.Combine(appdata, "AS2Tools")))
+            Directory.CreateDirectory(Path.Combine(appdata, "AS2Tools"));
         if (!File.Exists(Path.Combine(appdata, "AS2Tools\\Settings.json")))
         {
             var newCfg = new AppSettings();
