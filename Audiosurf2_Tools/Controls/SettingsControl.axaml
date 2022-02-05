@@ -9,6 +9,7 @@
     <UserControl.DataContext>
         <viewModels:SettingsViewModel />
     </UserControl.DataContext>
+    
     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
         <!--Probably cleaner to make a separate control for the buttons-->
@@ -66,9 +67,15 @@
                              Text="{Binding  TwitchMaxQueueItemsUntilDuplicationsAllowed}" />
                 </StackPanel>
             </GroupBox>
-            <Button Margin="5"
-                    Content="Save Settings"
-                    Command="{Binding SaveSettings}" />
+            <Button Margin="10,5"
+                    Command="{Binding SaveSettings}" >
+                <StackPanel Orientation="Horizontal"
+                            Spacing="5">
+                    <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/save.png"/>
+                    <TextBlock VerticalAlignment="Center"
+                               Text="Save Settings"/>
+                </StackPanel>
+            </Button>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -9,6 +9,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml.Converters;
 using Avalonia.Media;
 using ReactiveUI.Fody.Helpers;
@@ -41,19 +42,34 @@ public class TwitchPopOutViewModel : ViewModelBase
         var mainWnd = ((ClassicDesktopStyleApplicationLifetime) Application.Current!.ApplicationLifetime!).MainWindow;
         if (mainWnd == null)
             return;
-        
+
+        var stack = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Orientation = Orientation.Horizontal,
+            Spacing = 15
+        };
+        var text = new TextBox
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            MaxWidth = 50,
+            Width = 50
+        };
         var control = new Slider
         {
             Minimum = 0.0,
             Maximum = 100.0,
-            Margin = new Thickness(20),
             Width = 300
         };
         control.Bind(Slider.ValueProperty, new Binding(target, BindingMode.TwoWay));
+        text.Bind(TextBlock.TextProperty, new Binding(target, BindingMode.TwoWay));
+        stack.Children.Add(text);
+        stack.Children.Add(control);
         var wnd = new Window
         {
             Title = "Change Size Of " + niceTarget,
-            Content = control,
+            Content = stack,
             DataContext = this,
             SizeToContent = SizeToContent.WidthAndHeight
         };

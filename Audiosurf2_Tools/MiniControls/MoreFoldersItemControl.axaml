@@ -17,7 +17,7 @@
 
     <Grid>
         
-        <Grid ColumnDefinitions="100,*,Auto,Auto"
+        <Grid ColumnDefinitions="150,*,Auto,Auto"
               RowDefinitions="Auto,Auto"
               IsVisible="{Binding !IsEditing}">
 
@@ -111,7 +111,7 @@
             
         </Grid>
 
-        <Grid ColumnDefinitions="100,*,Auto,Auto"
+        <Grid ColumnDefinitions="150,*,Auto,Auto"
               RowDefinitions="Auto,Auto"
               IsVisible="{Binding IsEditing}">
 
@@ -127,12 +127,11 @@
             <NumericUpDown Grid.Column="0"
                            Grid.Row="1"
                            Margin="0,1.5,0,0"
-                           ShowButtonSpinner="False"
                            HorizontalAlignment="Center"
                            HorizontalContentAlignment="Center"
                            VerticalAlignment="Top"
                            VerticalContentAlignment="Center"
-                           ToolTip.Tip="-1 Represents Last"
+                           ToolTip.Tip="-1 Represents 'Last'"
                            Minimum="-1"
                            Value="{Binding Position, Mode=TwoWay}"/>
 
