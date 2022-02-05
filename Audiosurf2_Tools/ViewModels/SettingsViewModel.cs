@@ -21,12 +21,17 @@ public class SettingsViewModel : ViewModelBase
 
     public SettingsViewModel()
     {
-        LoadSettings();
+        _ = Task.Run(LoadSettings);
     }
 
-    public void LoadSettings()
+    public async Task LoadSettings()
     {
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        while (cfg == null)
+        {
+            await Task.Delay(100);
+            cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        }
         TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
         TwitchMaxQueueItemsUntilDuplicationsAllowed = cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
         TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
