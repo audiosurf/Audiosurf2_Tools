@@ -20,7 +20,7 @@ public class TwitchAuthUtil : ReactiveObject
     private HttpListener _listener { get; set; } = new();
     private CancellationTokenSource _timeOutCTS { get; set; } = new ();
     private Timer _timeOut { get; set; } = new ();
-    private DateTime _currentFullTime { get; set; } = DateTime.Now;
+    private DateTimeOffset _currentFullTime { get; set; } = DateTime.Now;
     [Reactive] public TimeSpan? CurrentTime { get; set; }
     [Reactive] public string OAuthToken { get; set; }
 
@@ -39,7 +39,7 @@ public class TwitchAuthUtil : ReactiveObject
             else
             {
                 CurrentTime = ready;
-                _currentFullTime = DateTime.Now;
+                _currentFullTime = DateTimeOffset.Now;
             }
         };
     }
@@ -65,7 +65,7 @@ public class TwitchAuthUtil : ReactiveObject
         {
             _listener.Start();
             _timeOut.Start();
-            _currentFullTime = DateTime.Now;
+            _currentFullTime = DateTimeOffset.Now;
             CurrentTime = TimeSpan.FromMinutes(3);
             
             Process.Start(new ProcessStartInfo(url)
@@ -105,7 +105,7 @@ public class TwitchAuthUtil : ReactiveObject
                     break;
                 }
                 
-                _currentFullTime = DateTime.Now;
+                _currentFullTime = DateTimeOffset.Now;
                 CurrentTime = TimeSpan.FromMinutes(3);
             }
             _timeOut.Stop();

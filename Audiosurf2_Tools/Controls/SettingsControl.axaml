@@ -1,0 +1,74 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="using:Audiosurf2_Tools.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Audiosurf2_Tools.Controls.SettingsControl">
+
+    <UserControl.DataContext>
+        <viewModels:SettingsViewModel />
+    </UserControl.DataContext>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+        <!--Probably cleaner to make a separate control for the buttons-->
+        <StackPanel Orientation="Vertical">
+            <GroupBox Margin="5"
+                      Header="Twitch Bot"
+                      BorderThickness="1"
+                      CornerRadius="2">
+                <StackPanel Orientation="Vertical"
+                            HorizontalAlignment="Left">
+                    <TextBlock Text="Chat Prefix:"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding TwitchCommandPrefix}" />
+                    
+                    <TextBlock Text="Request Cooldown (seconds):"
+                               TextWrapping="Wrap" />
+                    <NumericUpDown Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             Width="130"
+                             Value="{Binding  TwitchRequestCoolDown}" />
+                    
+                    <TextBlock Text="Max Song Length (seconds):"
+                               TextWrapping="Wrap" />
+                    <NumericUpDown Margin="0,5,0,15"
+                                   HorizontalAlignment="Left"
+                                   Width="130"
+                                   Value="{Binding TwitchMaxSongLengthSeconds}" />
+                    
+                    <TextBlock Text="Max Queue Size:"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding TwitchMaxQueueSize}" />
+
+                    <TextBlock Text="Max Recent Request Count:"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding  TwitchMaxRecentAgeBeforeDuplicationError}" />
+
+                    <TextBlock Text="Max Upcoming Request Amount Before Duplicates Are Allowed:"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,0"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding  TwitchMaxQueueItemsUntilDuplicationsAllowed}" />
+                </StackPanel>
+            </GroupBox>
+            <Button Margin="5"
+                    Content="Save Settings"
+                    Command="{Binding SaveSettings}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

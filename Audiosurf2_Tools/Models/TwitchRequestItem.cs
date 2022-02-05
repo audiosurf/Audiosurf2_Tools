@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using DynamicData;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 
@@ -8,7 +10,7 @@ namespace Audiosurf2_Tools.Models;
 
 public class TwitchRequestItem : ReactiveObject
 {
-    private readonly ICollection<TwitchRequestItem> _parentCollection;
+    private readonly Collection<TwitchRequestItem> _parentCollection;
     
     [Reactive] public string Title { get; set; }
     [Reactive] public string Channel { get; set; }
@@ -21,7 +23,7 @@ public class TwitchRequestItem : ReactiveObject
         
     }
     
-    public TwitchRequestItem(ICollection<TwitchRequestItem> parentCollection, string title, string channel, string location, string requester, TimeSpan duration = new TimeSpan())
+    public TwitchRequestItem(Collection<TwitchRequestItem> parentCollection, string title, string channel, string location, string requester, TimeSpan duration = new TimeSpan())
     {
         _parentCollection = parentCollection;
         Title = title;
@@ -43,5 +45,25 @@ public class TwitchRequestItem : ReactiveObject
     public void Remove()
     {
         _parentCollection.Remove(this);
+    }
+    
+    public void MoveUp()
+    {
+        var index = _parentCollection.IndexOf(this);
+        if (index == 0)
+            return;
+        var temp = _parentCollection[index];
+        Remove();
+        _parentCollection.Insert(index - 1, temp);
+    }
+
+    public void MoveDown()
+    {
+        var index = _parentCollection.IndexOf(this);
+        if (index == _parentCollection.Count - 1)
+            return;
+        var temp = _parentCollection[index];
+        _parentCollection.Insert(index + 2, temp);
+        Remove();
     }
 }

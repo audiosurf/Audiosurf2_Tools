@@ -1,0 +1,64 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:miniControls="clr-namespace:Audiosurf2_Tools.MiniControls"
+             xmlns:models="clr-namespace:Audiosurf2_Tools.Models"
+             xmlns:viewModels="clr-namespace:Audiosurf2_Tools.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Audiosurf2_Tools.Controls.TwitchPopOutControl">
+
+    <UserControl.DataContext>
+        <viewModels:TwitchPopOutViewModel />
+    </UserControl.DataContext>
+
+    <Grid RowDefinitions="Auto, *"
+          Background="{Binding BackgroundColor, Mode=TwoWay}">
+
+        <Menu Grid.Row="0"
+              Background="#000000">
+            <MenuItem Header="Font Sizes">
+                <MenuItem Header="Title"
+                          Command="{Binding ChangeFontSize}"
+                          CommandParameter="TitleFontSize" />
+                <MenuItem Header="Channel"
+                          Command="{Binding ChangeFontSize}"
+                          CommandParameter="ChannelFontSize" />
+                <MenuItem Header="Requester"
+                          Command="{Binding ChangeFontSize}"
+                          CommandParameter="RequesterFontSize" />
+            </MenuItem>
+            <MenuItem Header="Colors">
+                <MenuItem Header="Font Color"
+                          Command="{Binding ChangeColor}"
+                          CommandParameter="FontColor" />
+                <MenuItem Header="Background Color"
+                          Command="{Binding ChangeColor}"
+                          CommandParameter="BackgroundColor" />
+            </MenuItem>
+            <MenuItem Header="Save Sizes/Colors"
+                      Background="#222266"
+                      Command="{Binding SavePopUpConfigAsync}"
+                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
+        </Menu>
+
+        <ScrollViewer Grid.Row="1"
+                      Margin="10"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+
+            <ItemsControl CornerRadius="3"
+                          Items="{Binding ParentCollection, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="models:TwitchRequestItem">
+                        <miniControls:PopOutRequestItemControl RequestItem="{Binding Mode=TwoWay}"
+                                                               ParentControl="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}, Mode=TwoWay}"
+                                                               ParentContext="{Binding DataContext, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}, Mode=TwoWay}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </ScrollViewer>
+
+    </Grid>
+</UserControl>

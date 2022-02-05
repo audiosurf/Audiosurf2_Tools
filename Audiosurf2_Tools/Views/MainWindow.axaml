@@ -91,6 +91,18 @@
                                    Text="Twitch Bot"/>
                     </StackPanel>
                 </Button>
+                
+                <Button HorizontalAlignment="Stretch"
+                        Background="{Binding SettingsHighlight}"
+                        Command="{Binding  OpenSettings}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <Image Source="avares://Audiosurf2_Tools/Assets/settings.png"
+                               Height="25"/>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Settings"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </SplitView.Pane>
         
@@ -115,6 +127,10 @@
                 <controls:TwitchBotControl Grid.Row="1"
                                            DataContext="{Binding TwitchBotViewModel}"
                                            IsVisible="{Binding IsOpen}"/>
+                
+                <controls:SettingsControl Grid.Row="1"
+                                          DataContext="{Binding SettingsViewModel}"
+                                          IsVisible="{Binding IsOpen}"/>
                  
             </Grid>
             

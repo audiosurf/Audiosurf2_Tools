@@ -3,40 +3,66 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:Audiosurf2_Tools.ViewModels"
+             xmlns:miniControls="clr-namespace:Audiosurf2_Tools.MiniControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Audiosurf2_Tools.Controls.MoreFoldersControl">
-    
+
     <UserControl.DataContext>
-        <viewModels:MoreFoldersViewModel/>
+        <viewModels:MoreFoldersViewModel />
     </UserControl.DataContext>
-    
+
     <Grid ColumnDefinitions="*, 50">
-        
-        <ListBox Grid.Column="0"
-                 Margin="0,0,2.5,0"
-                 CornerRadius="3"
-                 Items="{Binding MoreFolders}"/>
-        
+        <ScrollViewer Grid.Column="0"
+                      Margin="0,0,2.5,0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl Background="#aa222222"
+                          CornerRadius="3"
+                          Items="{Binding MoreFolders}"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical">
+                            <Separator HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Center"
+                                       Margin="5,0"
+                                       BorderBrush="#666666"
+                                       BorderThickness="0.5" />
+                            <miniControls:MoreFoldersItemControl DataContext="{Binding Mode=TwoWay}" />
+                            <Separator HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Center"
+                                       Margin="5,0"
+                                       BorderBrush="#666666"
+                                       BorderThickness="0.5" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
         <StackPanel Grid.Column="1"
                     Margin="2.5,0,0,0"
                     HorizontalAlignment="Stretch"
                     Orientation="Vertical">
-            
+
             <Button HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center">
-                <Image Source="avares://Audiosurf2_Tools/Assets/addfolder.png"/>
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding AddMoreFolderItem}">
+                <Image Source="avares://Audiosurf2_Tools/Assets/addfolder.png" />
             </Button>
             <Button HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center">
-                <Image Source="avares://Audiosurf2_Tools/Assets/refresh.png"/>
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding LoadMoreFolderItemsAsync}">
+                <Image Source="avares://Audiosurf2_Tools/Assets/refresh.png" />
             </Button>
             <Button HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center">
-                <Image Source="avares://Audiosurf2_Tools/Assets/save.png"/>
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding SaveMoreFoldersAsync}">
+                <Image Source="avares://Audiosurf2_Tools/Assets/save.png" />
             </Button>
-            
+
         </StackPanel>
-        
+
     </Grid>
-    
+
 </UserControl>

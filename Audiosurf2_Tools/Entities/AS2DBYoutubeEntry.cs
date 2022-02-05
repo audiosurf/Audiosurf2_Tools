@@ -1,4 +1,8 @@
-﻿namespace Audiosurf2_Tools.Entities;
+﻿using System;
+using System.Data.SQLite;
+using System.Runtime.Serialization;
+
+namespace Audiosurf2_Tools.Entities;
 
 public class AS2DBYoutubeEntry
 {
@@ -11,5 +15,8 @@ public class AS2DBYoutubeEntry
     public string LinkUrl { get; set; }
     public long PlayCount { get; set; }
     public long Rating { get; set; }
-    public int LastPlayTime { get; set; }
+    public long LastPlayTime { get; set; }
+    
+    [IgnoreDataMember]
+    public DateTimeOffset LastPlayTimeParsed => DateTimeOffset.FromUnixTimeSeconds(LastPlayTime);
 }
