@@ -17,6 +17,7 @@ namespace Audiosurf2_Tools
 
         public override void OnFrameworkInitializationCompleted()
         {
+            _ = Task.Run(Globals.InitSettingsAsync);
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindow

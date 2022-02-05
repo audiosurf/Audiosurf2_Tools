@@ -11,20 +11,20 @@ namespace Audiosurf2_Tools.ViewModels;
 public class SettingsViewModel : ViewModelBase
 {
     [Reactive] public bool IsOpen { get; set; }
-    [Reactive] public string TwitchCommandPrefix { get; set; }
-    [Reactive] public int TwitchMaxQueueItemsUntilDuplicationsAllowed { get; set; }
-    [Reactive] public int TwitchMaxRecentAgeBeforeDuplicationError { get; set; }
-    [Reactive] public int TwitchMaxQueueSize { get; set; }
-    [Reactive] public int TwitchRequestCoolDown { get; set; }
-    [Reactive] public int TwitchMaxSongLengthSeconds { get; set; }
+    [Reactive] public string TwitchCommandPrefix { get; set; } = "!";
+    [Reactive] public int TwitchMaxQueueItemsUntilDuplicationsAllowed { get; set; } = 100;
+    [Reactive] public int TwitchMaxRecentAgeBeforeDuplicationError { get; set; } = 5;
+    [Reactive] public int TwitchMaxQueueSize { get; set; } = 25;
+    [Reactive] public int TwitchRequestCoolDown { get; set; } = 30;
+    [Reactive] public int TwitchMaxSongLengthSeconds { get; set; } = 600;
 
 
     public SettingsViewModel()
     {
-        _ = Task.Run(LoadSettings);
+        LoadSettings();
     }
 
-    public async Task LoadSettings()
+    public void LoadSettings()
     {
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         TwitchCommandPrefix = cfg!.TwitchCommandPrefix;

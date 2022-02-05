@@ -16,7 +16,6 @@ public class Globals
     static Globals()
     {
         GlobalEntites = new();
-        _ = Task.Run(InitSettingsAsync);
     }
     
     public static async Task InitSettingsAsync()

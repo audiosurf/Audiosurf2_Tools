@@ -49,6 +49,8 @@ public class TwitchBotViewModel : ViewModelBase
         TwitchBotSetupViewModel = new();
         _ = Task.Run(loadTwitchSettingsAsync);
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!Directory.Exists(Path.Combine(appdata, "AS2Tools")))
+            Directory.CreateDirectory(Path.Combine(appdata, "AS2Tools"));
         if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
             File.WriteAllText(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"), "#EXTM3U");
     }
@@ -86,6 +88,10 @@ public class TwitchBotViewModel : ViewModelBase
         TwitchBotSetupViewModel.BotUsernameDone = true;
         TwitchBotSetupViewModel.TwitchTokenDone = true;
         TwitchBotSetupViewModel.AS2LocationDone = true;
+        
+        if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
+            await ReloadRequestsPlaylist();
+        
         if (File.Exists(Path.Combine(settings.AS2Location, "MoreFolders.json")))
         {
             var lines = await File.ReadAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"));
@@ -126,7 +132,7 @@ public class TwitchBotViewModel : ViewModelBase
                 new ConnectionCredentials(TwitchBotSetupViewModel.BotUsernameResult,
                     TwitchBotSetupViewModel.TwitchTokenResult),
                 TwitchBotSetupViewModel.ChatChannelResult);
-            IsConnected = _twitchClient.Connect();
+            IsConnected = await Task.Run(_twitchClient.Connect);
         }
         catch (Exception e)
         {

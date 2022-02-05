@@ -52,6 +52,17 @@ public class ToolUtils
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            if (!Directory.Exists(directory))
+                return "";
+            var dirInfo = new DirectoryInfo(directory);
+            var files = dirInfo.GetFiles();
+            if (!files.Any(x => x.Name.Contains("Audiosurf2.exe")))
+            {
+                return "";
+            }
+        }
         return directory;
     }
 }
