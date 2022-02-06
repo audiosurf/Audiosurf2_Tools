@@ -270,7 +270,7 @@ public class TwitchBotViewModel : ViewModelBase
             if ((DateTimeOffset.Now - RequestTimes[username]).TotalSeconds < cfg.TwitchRequestCoolDown)
             {
                 _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} You're on cooldown! Wait {cfg.TwitchRequestCoolDown - (DateTimeOffset.Now - RequestTimes[username]).TotalSeconds} more seconds to request again!");
+                    $"@{username} You're on cooldown! Wait {(cfg.TwitchRequestCoolDown - (DateTimeOffset.Now - RequestTimes[username]).TotalSeconds).ToString("##")} more seconds to request again!");
                 return;
             }
         }
@@ -316,6 +316,7 @@ public class TwitchBotViewModel : ViewModelBase
             song.Duration ?? TimeSpan.Zero));
         _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
             $"@{username} added {song.Title} to the queue!");
+        RequestTimes.TryAdd(username, DateTimeOffset.Now);
     }
 
     private async Task requestCheckLoop()
