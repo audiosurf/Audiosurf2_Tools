@@ -316,7 +316,10 @@ public class TwitchBotViewModel : ViewModelBase
             song.Duration ?? TimeSpan.Zero));
         _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
             $"@{username} added {song.Title} to the queue!");
-        RequestTimes.TryAdd(username, DateTimeOffset.Now);
+        if (RequestTimes.ContainsKey(username))
+            RequestTimes[username] = DateTimeOffset.Now;
+        else
+            RequestTimes.TryAdd(username, DateTimeOffset.Now);
     }
 
     private async Task requestCheckLoop()
