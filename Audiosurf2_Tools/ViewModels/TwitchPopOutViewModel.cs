@@ -8,6 +8,7 @@ using Audiosurf2_Tools.Models;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.Converters;
@@ -20,15 +21,17 @@ namespace Audiosurf2_Tools.ViewModels;
 
 public class TwitchPopOutViewModel : ViewModelBase
 {
-    [Reactive] public double TitleFontSize { get; set; } = 12;
-    [Reactive] public double ChannelFontSize { get; set; } = 12;
-    [Reactive] public double RequesterFontSize { get; set; } = 12;
-    [Reactive] public IBrush FontColor { get; set; } = SolidColorBrush.Parse("#DDDDDD");
-    [Reactive] public IBrush BackgroundColor { get; set; } = SolidColorBrush.Parse("#aa222222");
+    [Reactive] public double TitleFontSize { get; set; }
+    [Reactive] public double ChannelFontSize { get; set; }
+    [Reactive] public double RequesterFontSize { get; set; }
+    [Reactive] public IBrush? FontColor { get; set; }
+    [Reactive] public IBrush? BackgroundColor { get; set; }
 
     public TwitchPopOutViewModel()
     {
         var cfg = Globals.TryGetGlobal<PopOutSettings>("PopOutSettings");
+        if (cfg == null)
+            return;
         TitleFontSize = cfg.TitleFontSize;
         ChannelFontSize = cfg.ChannelFontSize;
         RequesterFontSize = cfg.RequesterFontSize;
@@ -49,23 +52,23 @@ public class TwitchPopOutViewModel : ViewModelBase
             Orientation = Orientation.Horizontal,
             Spacing = 15
         };
-        var text = new TextBox
+        var textBlock = new TextBox
         {
             VerticalAlignment = VerticalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
             MaxWidth = 50,
             Width = 50
         };
-        var control = new Slider
+        var slider = new Slider
         {
             Minimum = 0.0,
             Maximum = 100.0,
             Width = 300
         };
-        control.Bind(Slider.ValueProperty, new Binding(target, BindingMode.TwoWay));
-        text.Bind(TextBlock.TextProperty, new Binding(target, BindingMode.TwoWay));
-        stack.Children.Add(text);
-        stack.Children.Add(control);
+        slider.Bind(RangeBase.ValueProperty, new Binding(target, BindingMode.TwoWay));
+        textBlock.Bind(TextBlock.TextProperty, new Binding(target, BindingMode.TwoWay));
+        stack.Children.Add(textBlock);
+        stack.Children.Add(slider);
         var wnd = new Window
         {
             Title = "Change Size Of " + niceTarget,
@@ -87,8 +90,10 @@ public class TwitchPopOutViewModel : ViewModelBase
         {
             Margin = new Thickness(25) 
         };
-        var binding = new Binding(target, BindingMode.TwoWay);
-        binding.Converter = new ColorToBrushConverter2();
+        var binding = new Binding(target, BindingMode.TwoWay)
+        {
+            Converter = new ColorToBrushConverter2()
+        };
         control.Bind(ColorPicker.ColorProperty, binding);
         var wnd = new Window
         {
@@ -107,8 +112,8 @@ public class TwitchPopOutViewModel : ViewModelBase
             TitleFontSize = TitleFontSize,
             ChannelFontSize = ChannelFontSize,
             RequesterFontSize = RequesterFontSize,
-            FontColor = FontColor.ToString()!,
-            BackgroundColor = BackgroundColor.ToString()!,
+            FontColor = FontColor?.ToString()!,
+            BackgroundColor = BackgroundColor?.ToString()!,
             Height = window.Height,
             Width = window.Width
         };

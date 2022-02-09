@@ -47,12 +47,6 @@ public class TwitchBotViewModel : ViewModelBase
         PastRequests.CollectionChanged += PastRequestsOnCollectionChanged;
         RequestTimes = new();
         TwitchBotSetupViewModel = new();
-        _ = Task.Run(loadTwitchSettingsAsync);
-        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (!Directory.Exists(Path.Combine(appdata, "AS2Tools")))
-            Directory.CreateDirectory(Path.Combine(appdata, "AS2Tools"));
-        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
-            File.WriteAllText(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"), "#EXTM3U");
     }
 
     private void PastRequestsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -68,45 +62,6 @@ public class TwitchBotViewModel : ViewModelBase
         if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Add)
         {
             _ = Task.Run(RebuildRequestsM3U);
-        }
-    }
-
-    private async Task loadTwitchSettingsAsync()
-    {
-        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json")))
-            return;
-        var data = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"));
-        var settings = JsonSerializer.Deserialize<TwitchSettings>(data);
-        if (settings == null)
-            return;
-        TwitchBotSetupViewModel.ChatChannelResult = settings.ChatChannel;
-        TwitchBotSetupViewModel.BotUsernameResult = settings.BotUsername;
-        TwitchBotSetupViewModel.TwitchTokenResult = settings.TwitchToken;
-        TwitchBotSetupViewModel.AS2LocationResult = settings.AS2Location;
-        TwitchBotSetupViewModel.ChatChannelDone = true;
-        TwitchBotSetupViewModel.BotUsernameDone = true;
-        TwitchBotSetupViewModel.TwitchTokenDone = true;
-        TwitchBotSetupViewModel.AS2LocationDone = true;
-        
-        if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
-            await ReloadRequestsPlaylist();
-        
-        if (File.Exists(Path.Combine(settings.AS2Location, "MoreFolders.json")))
-        {
-            var lines = await File.ReadAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"));
-            var obj = JsonSerializer.Deserialize<List<RawMoreFolderItem>>(lines);
-            if (obj == null || obj.Any(x => x.Path == Path.Combine(appdata, "AS2Tools")))
-                return;
-
-            obj.Add(new RawMoreFolderItem
-            {
-                Name = "Twitch Bot Requests",
-                Path = Path.Combine(appdata, "AS2Tools"),
-                Position = 9
-            });
-            lines = JsonSerializer.Serialize(obj);
-            await File.WriteAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"), lines);
         }
     }
 
@@ -238,7 +193,9 @@ public class TwitchBotViewModel : ViewModelBase
         var plsLocation = Path.Combine(appdata, "AS2Tools");
         if (!File.Exists(Path.Combine(plsLocation, $"{DateTime.Today.ToShortDateString()}.m3u")))
         {
-            await File.WriteAllTextAsync(Path.Combine(plsLocation, $"{DateTime.Today.ToShortDateString()}.m3u"),
+            await File.WriteAllTextAsync(
+                Path.Combine(plsLocation,
+                    $"{DateTime.Today.ToShortDateString().Replace('/', '.').Replace('\\', '.')}.m3u"),
                 "#EXTM3U");
         }
 
@@ -304,14 +261,14 @@ public class TwitchBotViewModel : ViewModelBase
                 $"@{username} Livestreams are not allowed!");
             return;
         }
-        
+
         if (song.Duration?.TotalSeconds > cfg.TwitchMaxSongLengthSeconds)
         {
             _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
                 $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
             return;
         }
-        
+
         Requests.Add(new TwitchRequestItem(Requests, song.Title, song.Author.Title, song.Url, username,
             song.Duration ?? TimeSpan.Zero));
         _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
@@ -349,8 +306,8 @@ public class TwitchBotViewModel : ViewModelBase
                 {
                     if ((DateTimeOffset.Now - latestPlayed.LastPlayTimeParsed).TotalHours > 12)
                         continue;
-                    
-                    if (!File.Exists(Path.Combine(plsLocation, "TwitchRequests.m3u")))
+
+                    if (!File.Exists(Path.Combine(plsLocation, "TwitchRequests.m3u"))) //Just in case
                         File.WriteAllText(Path.Combine(plsLocation, "TwitchRequests.m3u"), "#EXTM3U");
                     PastRequests.Insert(0, Requests[0]);
                     Requests.RemoveAt(0);

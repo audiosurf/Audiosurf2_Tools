@@ -17,28 +17,7 @@ public class SettingsViewModel : ViewModelBase
     [Reactive] public int TwitchMaxQueueSize { get; set; } = 25;
     [Reactive] public int TwitchRequestCoolDown { get; set; } = 30;
     [Reactive] public int TwitchMaxSongLengthSeconds { get; set; } = 600;
-
-
-    public SettingsViewModel()
-    {
-        _ = Task.Run(LoadSettings);
-    }
-
-    public async Task LoadSettings()
-    {
-        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
-        while (cfg == null)
-        {
-            await Task.Delay(100);
-            cfg = Globals.TryGetGlobal<AppSettings>("Settings");
-        }
-        TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
-        TwitchMaxQueueItemsUntilDuplicationsAllowed = cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
-        TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
-        TwitchMaxQueueSize = cfg.TwitchMaxQueueSize;
-        TwitchRequestCoolDown = cfg.TwitchRequestCoolDown;
-        TwitchMaxSongLengthSeconds = cfg.TwitchMaxSongLengthSeconds;
-    }
+    
 
     public async Task SaveSettings()
     {

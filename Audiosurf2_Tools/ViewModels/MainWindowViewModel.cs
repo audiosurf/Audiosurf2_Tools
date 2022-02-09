@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
 using Avalonia.Media;
 using ReactiveUI.Fody.Helpers;
@@ -16,6 +20,7 @@ public class MainWindowViewModel : ViewModelBase
     [Reactive] public TwitchBotViewModel TwitchBotViewModel { get; set; }
     [Reactive] public SettingsViewModel SettingsViewModel { get; set; }
     [Reactive] public bool OpenSidebar { get; set; } = true;
+    [Reactive] public bool IsLoading { get; set; } = true;
     [Reactive] public ISolidColorBrush InstallerHighlight { get; set; }
     [Reactive] public ISolidColorBrush MoreFoldersHighlight { get; set; }
     [Reactive] public ISolidColorBrush PlaylistEditorHighlight { get; set; }
@@ -35,8 +40,126 @@ public class MainWindowViewModel : ViewModelBase
         TwitchBotHighlight = Brushes.Transparent;
         SettingsHighlight = Brushes.Transparent;
         OpenTwitchBot();
+        _ = Task.Run(LoadCreateSettingsAsync);
     }
 
+    public async Task LoadCreateSettingsAsync()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!Directory.Exists(Path.Combine(appdata, "AS2Tools")))
+            Directory.CreateDirectory(Path.Combine(appdata, "AS2Tools"));
+
+        await InitSettingsAsync();
+        await LoadSettingsVMAsync();
+        await LoadMoreFoldersVMAsync();
+        await LoadTwitchSettingsVMAsync();
+        IsLoading = false;
+    }
+
+
+    public async Task InitSettingsAsync()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\Settings.json")))
+        {
+            var newCfg = new AppSettings();
+            var newCfgText = JsonSerializer.Serialize(newCfg);
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"), newCfgText);
+        }
+
+        var cfgText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"));
+        var cfg = JsonSerializer.Deserialize<AppSettings>(cfgText);
+        
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json")))
+        {
+            var newCfg = new PopOutSettings();
+            var newCfgText = JsonSerializer.Serialize(newCfg);
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"), newCfgText);
+        }
+        var popOutCfgString = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"));
+        var popOutCfg = JsonSerializer.Deserialize<PopOutSettings>(popOutCfgString);
+        Globals.GlobalEntites.Add("Settings", cfg!);
+        Globals.GlobalEntites.Add("PopOutSettings", popOutCfg!);
+    }
+
+    public async Task LoadMoreFoldersVMAsync()
+    {
+        var gameDir = await ToolUtils.GetGameDirectoryAsync();
+        if (string.IsNullOrWhiteSpace(gameDir))
+            return;
+        if (!File.Exists(Path.Combine(gameDir, "MoreFolders.json")))
+            return;
+
+        MoreFoldersViewModel.MoreFolders.Clear();
+        var lines = await File.ReadAllTextAsync(Path.Combine(gameDir, "MoreFolders.json"));
+        var obj = JsonSerializer.Deserialize<List<MoreFolderItem>>(lines);
+        if (obj == null)
+            return;
+        foreach (var item in obj)
+        {
+            item.Parent = MoreFoldersViewModel.MoreFolders;
+            MoreFoldersViewModel.MoreFolders.Add(item);
+        }
+    }
+
+    public async Task LoadSettingsVMAsync()
+    {
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        while (cfg == null)
+        {
+            await Task.Delay(100);
+            cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        }
+        SettingsViewModel.TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
+        SettingsViewModel.TwitchMaxQueueItemsUntilDuplicationsAllowed = cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
+        SettingsViewModel.TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
+        SettingsViewModel.TwitchMaxQueueSize = cfg.TwitchMaxQueueSize;
+        SettingsViewModel.TwitchRequestCoolDown = cfg.TwitchRequestCoolDown;
+        SettingsViewModel.TwitchMaxSongLengthSeconds = cfg.TwitchMaxSongLengthSeconds;
+    }
+    
+    public async Task LoadTwitchSettingsVMAsync()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"), "#EXTM3U");
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json")))
+            return;
+        var data = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"));
+        var settings = JsonSerializer.Deserialize<TwitchSettings>(data);
+        if (settings != null)
+        {
+            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelResult = settings.ChatChannel;
+            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameResult = settings.BotUsername;
+            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenResult = settings.TwitchToken;
+            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationResult = settings.AS2Location;
+            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelDone = true;
+            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameDone = true;
+            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenDone = true;
+            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationDone = true;
+        }
+        
+        if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
+            await TwitchBotViewModel.ReloadRequestsPlaylist();
+        
+        if (File.Exists(Path.Combine(settings!.AS2Location, "MoreFolders.json")))
+        {
+            var lines = await File.ReadAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"));
+            var obj = JsonSerializer.Deserialize<List<RawMoreFolderItem>>(lines);
+            if (obj == null || obj.Any(x => x.Path == Path.Combine(appdata, "AS2Tools")))
+                return;
+
+            obj.Add(new RawMoreFolderItem
+            {
+                Name = "Twitch Bot Requests",
+                Path = Path.Combine(appdata, "AS2Tools"),
+                Position = 9
+            });
+            lines = JsonSerializer.Serialize(obj);
+            await File.WriteAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"), lines);
+        }
+    }
+    
     public void OpenCloseSidebar()
         => OpenSidebar = !OpenSidebar;
 
