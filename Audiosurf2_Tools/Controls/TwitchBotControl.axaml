@@ -133,6 +133,12 @@
             </ItemsControl>
 
         </GroupBox>
+        
+        <TextBlock Grid.Column="1"
+                   Grid.Row="2"
+                   Margin="10"
+                   Text="{Binding RequestsLength}"
+                   HorizontalAlignment="Right"/>
 
         <GroupBox Grid.Column="1"
                   Grid.Row="2"

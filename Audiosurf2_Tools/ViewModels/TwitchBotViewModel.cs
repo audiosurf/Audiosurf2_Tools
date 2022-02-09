@@ -33,6 +33,7 @@ public class TwitchBotViewModel : ViewModelBase
 
     [Reactive] public ObservableCollection<string> ChatMessages { get; set; }
     [Reactive] public ObservableCollection<TwitchRequestItem> Requests { get; set; }
+    [Reactive] public TimeSpan RequestsLength { get; set; }
     [Reactive] public ObservableCollection<TwitchRequestItem> PastRequests { get; set; }
 
     public ConcurrentDictionary<string, DateTimeOffset> RequestTimes { get; set; }
@@ -40,6 +41,7 @@ public class TwitchBotViewModel : ViewModelBase
 
     public TwitchBotViewModel()
     {
+        RequestsLength = TimeSpan.Zero;
         ChatMessages = new();
         Requests = new();
         Requests.CollectionChanged += RequestsOnCollectionChanged;
@@ -61,6 +63,10 @@ public class TwitchBotViewModel : ViewModelBase
     {
         if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Add)
         {
+            var tmSpn = TimeSpan.Zero;
+            var times = Requests.Select(x => x.Duration);
+            tmSpn = times.Aggregate(tmSpn, (current, duration) => current + duration);
+            RequestsLength = tmSpn;
             _ = Task.Run(RebuildRequestsM3U);
         }
     }
@@ -191,17 +197,17 @@ public class TwitchBotViewModel : ViewModelBase
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var plsLocation = Path.Combine(appdata, "AS2Tools");
-        if (!File.Exists(Path.Combine(plsLocation, $"{DateTime.Today.ToShortDateString()}.m3u")))
+        var titleDate = DateTime.Today.ToShortDateString().Replace('/', '.').Replace('\\', '.');
+        if (!File.Exists(Path.Combine(plsLocation, $"{titleDate}.m3u")))
         {
             await File.WriteAllTextAsync(
                 Path.Combine(plsLocation,
-                    $"{DateTime.Today.ToShortDateString().Replace('/', '.').Replace('\\', '.')}.m3u"),
+                    $"{titleDate}.m3u"),
                 "#EXTM3U");
         }
 
-        var title = DateTime.Today.ToShortDateString();
         var content = new M3uContent();
-        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{title}.m3u"));
+        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"));
         var playlist = content.GetFromString(plsText);
         playlist.PlaylistEntries.Clear();
         foreach (var vid in PastRequests)
@@ -214,7 +220,7 @@ public class TwitchBotViewModel : ViewModelBase
         }
 
         plsText = content.ToText(playlist);
-        await File.WriteAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{title}.m3u"), plsText);
+        await File.WriteAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"), plsText);
     }
 
     private async Task handleSongRequestAsync(string id, string username)
