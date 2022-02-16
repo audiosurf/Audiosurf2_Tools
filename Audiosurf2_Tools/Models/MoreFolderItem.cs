@@ -7,6 +7,8 @@ namespace Audiosurf2_Tools.Models;
 
 public class MoreFolderItem : ReactiveObject
 {
+    public delegate void SomethingChangedEventHandler();
+    public event SomethingChangedEventHandler SomethingChangedEvent;
     public Collection<MoreFolderItem> Parent { get; set; }
     [Reactive] public string Name { get; set; }
     [Reactive] public string Path { get; set; }
@@ -28,6 +30,7 @@ public class MoreFolderItem : ReactiveObject
     public void EditToggle()
     {
         IsEditing = !IsEditing;
+        SomethingChangedEvent?.Invoke();
     }
 
     public void MoveUp()

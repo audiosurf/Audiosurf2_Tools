@@ -4,14 +4,18 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:Audiosurf2_Tools.Controls"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="400"
         x:Class="Audiosurf2_Tools.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="Audiosurf2_Tools"
         Background="Transparent"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="Default"
-        SystemDecorations="Full">
+        SystemDecorations="Full"
+        MinHeight="400"
+        MinWidth="800"
+        Height="480"
+        Width="900">
 
     <Design.DataContext>
         <vm:MainWindowViewModel />
@@ -121,10 +125,18 @@
                         <Separator Background="#888888"
                                    Height="1" />
                     </StackPanel>
+                    
+                    <controls:InstallerControl Grid.Row="1"
+                                               DataContext="{Binding InstallerViewModel}"
+                                               IsVisible="{Binding IsOpen}" />
 
                     <controls:MoreFoldersControl Grid.Row="1"
                                                  DataContext="{Binding MoreFoldersViewModel}"
                                                  IsVisible="{Binding IsOpen}" />
+                    
+                    <controls:PlaylistEditorControl Grid.Row="1"
+                                                    DataContext="{Binding PlaylistEditorViewModel}"
+                                                    IsVisible="{Binding IsOpen}" />
 
                     <controls:TwitchBotControl Grid.Row="1"
                                                DataContext="{Binding TwitchBotViewModel}"

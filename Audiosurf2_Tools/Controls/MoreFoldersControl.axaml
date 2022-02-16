@@ -12,33 +12,30 @@
     </UserControl.DataContext>
 
     <Grid ColumnDefinitions="*, 50">
-        <ScrollViewer Grid.Column="0"
-                      Margin="0,0,2.5,0"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl Background="#aa222222"
-                          CornerRadius="3"
-                          Items="{Binding MoreFolders}"
-                          ScrollViewer.VerticalScrollBarVisibility="Auto">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Vertical">
-                            <Separator HorizontalAlignment="Stretch"
-                                       VerticalAlignment="Center"
-                                       Margin="5,0"
-                                       BorderBrush="#666666"
-                                       BorderThickness="0.5" />
-                            <miniControls:MoreFoldersItemControl DataContext="{Binding Mode=TwoWay}" />
-                            <Separator HorizontalAlignment="Stretch"
-                                       VerticalAlignment="Center"
-                                       Margin="5,0"
-                                       BorderBrush="#666666"
-                                       BorderThickness="0.5" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <Border Grid.Column="0"
+                Margin="0,0,2.5,0"
+                BorderBrush="#666666"
+                BorderThickness="1"
+                CornerRadius="3">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl Background="#aa222222"
+                              CornerRadius="3"
+                              Items="{Binding MoreFolders}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical">
+                                <miniControls:MoreFoldersItemControl BorderBrush="#222222"
+                                                                     BorderThickness="1" 
+                                                                     CornerRadius="3"
+                                                                     Padding="2.5"
+                                                                     DataContext="{Binding Mode=TwoWay}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
 
         <StackPanel Grid.Column="1"
                     Margin="2.5,0,0,0"
@@ -57,6 +54,7 @@
             </Button>
             <Button HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
+                    Background="{Binding SaveBtnBackground, Mode=TwoWay}"
                     Command="{Binding SaveMoreFoldersAsync}">
                 <Image Source="avares://Audiosurf2_Tools/Assets/save.png" />
             </Button>

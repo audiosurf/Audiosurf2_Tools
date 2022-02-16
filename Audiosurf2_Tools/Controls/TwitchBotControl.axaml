@@ -14,7 +14,7 @@
     </UserControl.DataContext>
 
     <Grid ColumnDefinitions="*,1.75*"
-          RowDefinitions="Auto,Auto,*"
+          RowDefinitions="Auto,Auto,Auto,Auto,*"
           HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch">
 
@@ -110,9 +110,39 @@
                    VerticalAlignment="Center"
                    BorderThickness="1"
                    BorderBrush="White" />
-
+        
+        <StackPanel Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="5">
+            <TextBlock Text="Queue Duration:"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding RequestsLength}"
+                       VerticalAlignment="Center"/>
+            <Separator Margin="0,5"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Stretch"
+                       BorderThickness="1"
+                       BorderBrush="White" />
+            <TextBlock Text="Requests Enabled:"
+                       VerticalAlignment="Center"/>
+            <ToggleSwitch IsChecked="{Binding RequestsOpen}"/>
+        </StackPanel>
+        
+        <Separator Grid.Column="0"
+                   Grid.ColumnSpan="2"
+                   Grid.Row="3"
+                   Margin="10,0"
+                   HorizontalAlignment="Stretch"
+                   VerticalAlignment="Center"
+                   BorderThickness="1"
+                   BorderBrush="White" />
+        
         <GroupBox Grid.Column="0"
-                  Grid.Row="2"
+                  Grid.Row="4"
                   Margin="0,2.5,1.5,0"
                   Header="Chat"
                   BorderThickness="1"
@@ -133,15 +163,9 @@
             </ItemsControl>
 
         </GroupBox>
-        
-        <TextBlock Grid.Column="1"
-                   Grid.Row="2"
-                   Margin="10"
-                   Text="{Binding RequestsLength}"
-                   HorizontalAlignment="Right"/>
 
         <GroupBox Grid.Column="1"
-                  Grid.Row="2"
+                  Grid.Row="4"
                   Margin="0,2.5,0,0"
                   Header="Requests"
                   BorderThickness="1"
@@ -163,7 +187,7 @@
         <controls:TwitchBotSetupControl Grid.Column="0"
                                         Grid.ColumnSpan="2"
                                         Grid.Row="0"
-                                        Grid.RowSpan="3"
+                                        Grid.RowSpan="5"
                                         HorizontalAlignment="Stretch"
                                         VerticalAlignment="Stretch"
                                         Background="#000000"

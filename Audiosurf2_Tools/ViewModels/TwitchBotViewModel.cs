@@ -10,12 +10,14 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ATL;
 using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
 using Dapper;
 using PlaylistsNET.Content;
 using PlaylistsNET.Models;
 using ReactiveUI.Fody.Helpers;
+using Svg.FilterEffects;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -29,6 +31,7 @@ public class TwitchBotViewModel : ViewModelBase
 {
     private TwitchClient _twitchClient { get; set; }
     [Reactive] private bool IsConnected { get; set; }
+    [Reactive] public bool RequestsOpen { get; set; } = true;
     [Reactive] public bool IsOpen { get; set; }
 
     [Reactive] public ObservableCollection<string> ChatMessages { get; set; }
@@ -36,7 +39,7 @@ public class TwitchBotViewModel : ViewModelBase
     [Reactive] public TimeSpan RequestsLength { get; set; }
     [Reactive] public ObservableCollection<TwitchRequestItem> PastRequests { get; set; }
 
-    public ConcurrentDictionary<string, DateTimeOffset> RequestTimes { get; set; }
+    private ConcurrentDictionary<string, DateTimeOffset> requestTimes { get; set; }
     [Reactive] public TwitchBotSetupViewModel TwitchBotSetupViewModel { get; set; }
 
     public TwitchBotViewModel()
@@ -47,7 +50,7 @@ public class TwitchBotViewModel : ViewModelBase
         Requests.CollectionChanged += RequestsOnCollectionChanged;
         PastRequests = new ObservableCollection<TwitchRequestItem>();
         PastRequests.CollectionChanged += PastRequestsOnCollectionChanged;
-        RequestTimes = new();
+        requestTimes = new();
         TwitchBotSetupViewModel = new();
     }
 
@@ -142,6 +145,8 @@ public class TwitchBotViewModel : ViewModelBase
         var prefix = cfg!.TwitchCommandPrefix;
         if (e.ChatMessage.Message.ToLower().StartsWith(prefix + "sr "))
         {
+            if(!InitialCanRequestChecks(e.ChatMessage.Username))
+                return;
             var length = (prefix + "sr ").Length;
             var reg =
                 @"(?i)(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})(?-i)";
@@ -151,7 +156,72 @@ public class TwitchBotViewModel : ViewModelBase
             {
                 _ = Task.Run(() => handleSongRequestAsync(match.Groups[1].Value, e.ChatMessage.Username));
             }
+
+            else if (cfg.TwitchEnableLocalRequests)
+            {
+                if (!File.Exists(Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length))))
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{e.ChatMessage.Username} File not found, did you type the name wrong? (you also need to type the extension like .mp3 or .flac)");
+                    return;
+                }
+                _ = Task.Run(() =>
+                    handleSongRequestAsync(
+                        Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length)),
+                        e.ChatMessage.Username, false));
+            }
         }
+    }
+
+    public bool InitialCanRequestChecks(string username)
+    {
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        
+        if (!RequestsOpen)
+        {
+            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                $"@{username} Requests are currently disabled!");
+            return false;
+        }
+
+        var durationUpcoming = Requests.Sum(x => x.Duration.Ticks);
+        var durationPast = PastRequests.Sum(x => x.Duration.Ticks);
+        var fullDuration = new TimeSpan(durationUpcoming + durationPast);
+        if (cfg!.TwitchQueueMaxLengthEnabled && cfg.TwitchQueueMaxLength < fullDuration)
+        {
+            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                $"@{username} The queue has reached the maximum length, no more requests fit in!");
+            return false;
+        }
+        
+        if (requestTimes.ContainsKey(username))
+        {
+            if ((DateTimeOffset.Now - requestTimes[username]).TotalSeconds < cfg.TwitchRequestCoolDown)
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} You're on cooldown! Wait {(cfg.TwitchRequestCoolDown - (DateTimeOffset.Now - requestTimes[username]).TotalSeconds).ToString("##")} more seconds to request again!");
+                return false;
+            }
+        }
+
+        if (cfg.TwitchQueueCutOffTimeEnabled)
+        {
+            if ((DateTimeOffset.Now + RequestsLength) > cfg.TwitchQueueCutOffTime)
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Queue has reached cut-off time, no more requests fit in!");
+                return false;
+            }
+        }
+
+        if (Requests.Count >= cfg.TwitchMaxQueueSize)
+        {
+            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                $"@{username} Queue is full, please try again later!");
+            return false;
+        }
+
+        return true;
     }
 
     public async Task ReloadRequestsPlaylist()
@@ -161,15 +231,29 @@ public class TwitchBotViewModel : ViewModelBase
         var content = new M3uContent();
         var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"));
         var playlist = content.GetFromString(plsText);
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         foreach (var vid in playlist.PlaylistEntries)
         {
-            var video = await Consts.YoutubeClient.Videos.GetAsync(vid.Path);
-            Requests.Add(new TwitchRequestItem(Requests,
-                video.Title,
-                video.Author.Title,
-                video.Url,
-                vid.CustomProperties.ContainsKey("EXTREQ") ? vid.CustomProperties["EXTREQ"] : "n/a",
-                video.Duration ?? TimeSpan.Zero));
+            if (vid.Path.Contains("https://"))
+            {
+                var video = await Consts.YoutubeClient.Videos.GetAsync(vid.Path);
+                Requests.Add(new TwitchRequestItem(Requests,
+                    video.Title,
+                    video.Author.Title,
+                    video.Url,
+                    vid.CustomProperties.ContainsKey("EXTREQ") ? vid.CustomProperties["EXTREQ"] : "n/a",
+                    video.Duration ?? TimeSpan.Zero));
+            }
+            else if (cfg!.TwitchEnableLocalRequests && File.Exists(vid.Path))
+            {
+                var video = new Track(vid.Path);
+                Requests.Add(new TwitchRequestItem(Requests,
+                    video.Title,
+                    video.Artist,
+                    video.Path,
+                    vid.CustomProperties.ContainsKey("EXTREQ") ? vid.CustomProperties["EXTREQ"] : "n/a",
+                    TimeSpan.FromSeconds(video.Duration)));
+            }
         }
     }
 
@@ -223,73 +307,75 @@ public class TwitchBotViewModel : ViewModelBase
         await File.WriteAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"), plsText);
     }
 
-    private async Task handleSongRequestAsync(string id, string username)
+    private async Task handleSongRequestAsync(string id, string username, bool isYoutube = true)
     {
         //more checks here
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         var mostRecent = PastRequests.Take(cfg!.TwitchMaxRecentAgeBeforeDuplicateError);
-        if (RequestTimes.ContainsKey(username))
-        {
-            if ((DateTimeOffset.Now - RequestTimes[username]).TotalSeconds < cfg.TwitchRequestCoolDown)
-            {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} You're on cooldown! Wait {(cfg.TwitchRequestCoolDown - (DateTimeOffset.Now - RequestTimes[username]).TotalSeconds).ToString("##")} more seconds to request again!");
-                return;
-            }
-        }
-
-        if (Requests.TakeLast(cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed).Any(x => x.Location.Contains(id)))
-        {
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} This is already in the queue!");
-            return;
-        }
-
         if (mostRecent.Any(x => x.Location.Contains(id)))
         {
             _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
                 $"@{username} This was recently played!");
             return;
         }
-
-        if (Requests.Count >= cfg.TwitchMaxQueueSize)
+        if (Requests.TakeLast(cfg!.TwitchMaxQueueItemsUntilDuplicationsAllowed).Any(x => x.Location.Contains(id)))
         {
             _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} Queue is full, please try again later!");
+                $"@{username} This is already in the queue!");
             return;
         }
-
-        var song = await Consts.YoutubeClient.Videos.GetAsync(id);
-
-        if (song.Duration == null)
+        if (isYoutube)
         {
+            var song = await Consts.YoutubeClient.Videos.GetAsync(id);
+
+            if (song.Duration == null)
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Livestreams are not allowed!");
+                return;
+            }
+
+            if (song.Duration?.TotalSeconds > cfg.TwitchMaxSongLengthSeconds)
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                return;
+            }
+
+            Requests.Add(new TwitchRequestItem(Requests, song.Title, song.Author.Title, song.Url, username,
+                song.Duration ?? TimeSpan.Zero));
             _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} Livestreams are not allowed!");
-            return;
+                $"@{username} added {song.Title} to the queue!");
         }
 
-        if (song.Duration?.TotalSeconds > cfg.TwitchMaxSongLengthSeconds)
-        {
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
-            return;
-        }
-
-        Requests.Add(new TwitchRequestItem(Requests, song.Title, song.Author.Title, song.Url, username,
-            song.Duration ?? TimeSpan.Zero));
-        _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-            $"@{username} added {song.Title} to the queue!");
-        if (RequestTimes.ContainsKey(username))
-            RequestTimes[username] = DateTimeOffset.Now;
         else
-            RequestTimes.TryAdd(username, DateTimeOffset.Now);
+        {
+            var song = new Track(id);
+
+            if (song.Duration > cfg.TwitchMaxSongLengthSeconds)
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                return;
+            }
+
+            Requests.Add(new TwitchRequestItem(Requests, song.Title ?? id.Split('\\').Last(), song.Artist, id, username,
+                TimeSpan.FromSeconds(song.Duration)));
+            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                $"@{username} added {song.Title ?? id.Split('\\').Last()} to the queue!");
+        }
+        
+        
+        if (requestTimes.ContainsKey(username))
+            requestTimes[username] = DateTimeOffset.Now;
+        else
+            requestTimes.TryAdd(username, DateTimeOffset.Now);
     }
 
     private async Task requestCheckLoop()
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var plsLocation = Path.Combine(appdata, "AS2Tools");
-        M3uContent content = new M3uContent();
         while (IsConnected)
         {
             await Task.Delay(5000);
@@ -300,23 +386,42 @@ public class TwitchBotViewModel : ViewModelBase
                 TwitchBotSetupViewModel.AS2LocationResult, "Audiosurf2_Data\\cache\\db\\AudiosurfMusicLibrary.aml"));
             try
             {
-                var latestPlayed =
+                var latestPlayedYoutubeEntry =
                     await con.QueryFirstOrDefaultAsync<AS2DBYoutubeEntry>(
                         "SELECT * FROM scsongs ORDER BY lastplaytime DESC LIMIT 1");
-                if (latestPlayed == null)
+                var latestPlayedLocalEntryByLastPlayTime =
+                    await con.QueryFirstOrDefaultAsync<AS2DBLocalEntry>(
+                        "SELECT * FROM songs ORDER BY lastplaytime DESC LIMIT 1");
+                var latestPlayedLocalEntryBySongId =
+                    await con.QueryFirstOrDefaultAsync<AS2DBLocalEntry>(
+                        "SELECT * FROM songs ORDER BY songid DESC LIMIT 1");
+                if (latestPlayedYoutubeEntry == null)
                     throw new SqlNullValueException("CheckLoop: Latest song is null");
 
-                var latestGameId = latestPlayed.Name.Split(':')[1];
-                var latestReq = Requests[0].Location;
-                if (latestReq.Contains(latestGameId))
+                var latestYoutubeId = latestPlayedYoutubeEntry.Name.Split(':')[1];
+                var toRemove = Requests.FirstOrDefault(x => x.Location.Contains(latestYoutubeId));
+                
+                //Check local songs DB by lastPlayTime
+                if (toRemove == null)
                 {
-                    if ((DateTimeOffset.Now - latestPlayed.LastPlayTimeParsed).TotalHours > 12)
-                        continue;
+                    toRemove = Requests.FirstOrDefault(x =>
+                        x.Location.ToLower()
+                            .Replace('/', '\\')
+                            .Replace("\\\\", "\\") == latestPlayedLocalEntryByLastPlayTime.Path);
+                }
 
+                //By last added ID, maybe not use this
+                //if (toRemove == null)
+                //    toRemove = Requests.FirstOrDefault(x =>
+                //        x.Location.ToLower()
+                //            .Replace('/', '\\')
+                //            .Replace("\\\\", "\\") == latestPlayedLocalEntryBySongId.Path);
+                if (toRemove != null)
+                {
                     if (!File.Exists(Path.Combine(plsLocation, "TwitchRequests.m3u"))) //Just in case
-                        File.WriteAllText(Path.Combine(plsLocation, "TwitchRequests.m3u"), "#EXTM3U");
-                    PastRequests.Insert(0, Requests[0]);
-                    Requests.RemoveAt(0);
+                        await File.WriteAllTextAsync(Path.Combine(plsLocation, "TwitchRequests.m3u"), "#EXTM3U");
+                    PastRequests.Insert(0, toRemove);
+                    Requests.Remove(toRemove);
                 }
             }
             catch (Exception e)

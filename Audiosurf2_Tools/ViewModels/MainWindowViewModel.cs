@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
 using Avalonia.Media;
+using Avalonia.Threading;
 using ReactiveUI.Fody.Helpers;
 
 namespace Audiosurf2_Tools.ViewModels;
@@ -39,7 +40,7 @@ public class MainWindowViewModel : ViewModelBase
         PlaylistEditorHighlight = Brushes.Transparent;
         TwitchBotHighlight = Brushes.Transparent;
         SettingsHighlight = Brushes.Transparent;
-        OpenTwitchBot();
+        OpenPlaylistEditor();
         _ = Task.Run(LoadCreateSettingsAsync);
     }
 
@@ -49,10 +50,19 @@ public class MainWindowViewModel : ViewModelBase
         if (!Directory.Exists(Path.Combine(appdata, "AS2Tools")))
             Directory.CreateDirectory(Path.Combine(appdata, "AS2Tools"));
 
-        await InitSettingsAsync();
-        await LoadSettingsVMAsync();
-        await LoadMoreFoldersVMAsync();
-        await LoadTwitchSettingsVMAsync();
+        try
+        {
+            await InitSettingsAsync();
+            await LoadSettingsVMAsync();
+            await LoadInstallerVMAsync();
+            await LoadMoreFoldersVMAsync();
+            await LoadTwitchSettingsVMAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+
         IsLoading = false;
     }
 
@@ -69,17 +79,24 @@ public class MainWindowViewModel : ViewModelBase
 
         var cfgText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"));
         var cfg = JsonSerializer.Deserialize<AppSettings>(cfgText);
-        
+
         if (!File.Exists(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json")))
         {
             var newCfg = new PopOutSettings();
             var newCfgText = JsonSerializer.Serialize(newCfg);
             await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"), newCfgText);
         }
+
         var popOutCfgString = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"));
         var popOutCfg = JsonSerializer.Deserialize<PopOutSettings>(popOutCfgString);
         Globals.GlobalEntites.Add("Settings", cfg!);
         Globals.GlobalEntites.Add("PopOutSettings", popOutCfg!);
+    }
+
+    public async Task LoadInstallerVMAsync()
+    {
+        var dir = await ToolUtils.GetGameDirectoryAsync();
+        Dispatcher.UIThread.Post(() => InstallerViewModel.GameLocation = dir);
     }
 
     public async Task LoadMoreFoldersVMAsync()
@@ -90,16 +107,22 @@ public class MainWindowViewModel : ViewModelBase
         if (!File.Exists(Path.Combine(gameDir, "MoreFolders.json")))
             return;
 
-        MoreFoldersViewModel.MoreFolders.Clear();
+        Dispatcher.UIThread.Post(() => MoreFoldersViewModel.MoreFolders.Clear());
         var lines = await File.ReadAllTextAsync(Path.Combine(gameDir, "MoreFolders.json"));
         var obj = JsonSerializer.Deserialize<List<MoreFolderItem>>(lines);
         if (obj == null)
             return;
         foreach (var item in obj)
         {
-            item.Parent = MoreFoldersViewModel.MoreFolders;
-            MoreFoldersViewModel.MoreFolders.Add(item);
+            Dispatcher.UIThread.Post(() =>
+            {
+                item.Parent = MoreFoldersViewModel.MoreFolders;
+                item.SomethingChangedEvent += MoreFoldersViewModel.HighlightSaveButton;
+                MoreFoldersViewModel.MoreFolders.Add(item);
+            });
         }
+
+        Dispatcher.UIThread.Post(() => MoreFoldersViewModel.IsInitialized = true);
     }
 
     public async Task LoadSettingsVMAsync()
@@ -110,14 +133,22 @@ public class MainWindowViewModel : ViewModelBase
             await Task.Delay(100);
             cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         }
+
         SettingsViewModel.TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
         SettingsViewModel.TwitchMaxQueueItemsUntilDuplicationsAllowed = cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
         SettingsViewModel.TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
         SettingsViewModel.TwitchMaxQueueSize = cfg.TwitchMaxQueueSize;
         SettingsViewModel.TwitchRequestCoolDown = cfg.TwitchRequestCoolDown;
         SettingsViewModel.TwitchMaxSongLengthSeconds = cfg.TwitchMaxSongLengthSeconds;
+        SettingsViewModel.TwitchQueueMaxLengthEnabled = cfg.TwitchQueueMaxLengthEnabled;
+        SettingsViewModel.TwitchQueueMaxLength = cfg.TwitchQueueMaxLength;
+        SettingsViewModel.TwitchQueueCutOffTimeEnabled = cfg.TwitchQueueCutOffTimeEnabled;
+        SettingsViewModel.TwitchQueueCutOffTimeDate = cfg.TwitchQueueCutOffTime.Date;
+        SettingsViewModel.TwitchQueueCutOffTimeTime = cfg.TwitchQueueCutOffTime.TimeOfDay;
+        SettingsViewModel.TwitchEnableLocalRequests = cfg.TwitchEnableLocalRequests;
+        SettingsViewModel.TwitchLocalRequestPath = cfg.TwitchLocalRequestPath;
     }
-    
+
     public async Task LoadTwitchSettingsVMAsync()
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -138,10 +169,10 @@ public class MainWindowViewModel : ViewModelBase
             TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenDone = true;
             TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationDone = true;
         }
-        
+
         if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
             await TwitchBotViewModel.ReloadRequestsPlaylist();
-        
+
         if (File.Exists(Path.Combine(settings!.AS2Location, "MoreFolders.json")))
         {
             var lines = await File.ReadAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"));
@@ -159,14 +190,15 @@ public class MainWindowViewModel : ViewModelBase
             await File.WriteAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"), lines);
         }
     }
-    
+
     public void OpenCloseSidebar()
         => OpenSidebar = !OpenSidebar;
 
     public void OpenInstaller()
     {
         (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
-            (SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, Brushes.Transparent);
+            (SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent, Brushes.Transparent, Brushes.Transparent,
+                Brushes.Transparent);
         (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
                 TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
             (true, false, false, false, false);
@@ -175,7 +207,8 @@ public class MainWindowViewModel : ViewModelBase
     public void OpenMoreFolders()
     {
         (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
-            (Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent, Brushes.Transparent, Brushes.Transparent);
+            (Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent, Brushes.Transparent,
+                Brushes.Transparent);
         (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
                 TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
             (false, true, false, false, false);
@@ -184,7 +217,8 @@ public class MainWindowViewModel : ViewModelBase
     public void OpenPlaylistEditor()
     {
         (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
-            (Brushes.Transparent, Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent, Brushes.Transparent);
+            (Brushes.Transparent, Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent,
+                Brushes.Transparent);
         (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
                 TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
             (false, false, true, false, false);
@@ -193,16 +227,18 @@ public class MainWindowViewModel : ViewModelBase
     public void OpenTwitchBot()
     {
         (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
-            (Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent);
+            (Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"),
+                Brushes.Transparent);
         (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
                 TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
             (false, false, false, true, false);
     }
-    
+
     public void OpenSettings()
     {
         (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
-            (Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"));
+            (Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, Brushes.Transparent,
+                SolidColorBrush.Parse("#33ffffff"));
         (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
                 TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
             (false, false, false, false, true);
