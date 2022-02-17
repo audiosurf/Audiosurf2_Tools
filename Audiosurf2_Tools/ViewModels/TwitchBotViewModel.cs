@@ -191,6 +191,8 @@ public class TwitchBotViewModel : ViewModelBase
         var durationUpcoming = Requests.Sum(x => x.Duration.Ticks);
         var durationPast = PastRequests.Sum(x => x.Duration.Ticks);
         var fullDuration = new TimeSpan(durationUpcoming + durationPast);
+        if (PastRequests.Count != 0)
+            fullDuration += PastRequests[0].Duration;
         if (cfg!.TwitchQueueMaxLengthEnabled && cfg.TwitchQueueMaxLength < fullDuration)
         {
             Dispatcher.UIThread.Post(() =>

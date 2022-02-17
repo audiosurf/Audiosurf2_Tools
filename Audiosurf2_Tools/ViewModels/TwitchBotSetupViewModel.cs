@@ -140,6 +140,7 @@ public class TwitchBotSetupViewModel : ViewModelBase
             AS2Location = AS2LocationResult
         };
         var text = JsonSerializer.Serialize(settings);
+        Globals.GlobalEntites.Add("TwitchSettings", settings);
         await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"), text);
         if (File.Exists(Path.Combine(settings.AS2Location, "MoreFolders.json")))
         {

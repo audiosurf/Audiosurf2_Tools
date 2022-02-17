@@ -168,10 +168,11 @@ public class MainWindowViewModel : ViewModelBase
             TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameResult = settings.BotUsername;
             TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenResult = settings.TwitchToken;
             TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationResult = settings.AS2Location;
-            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelDone = true;
-            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameDone = true;
-            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenDone = true;
-            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationDone = true;
+            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelDone = !string.IsNullOrWhiteSpace(settings.ChatChannel);
+            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameDone = !string.IsNullOrWhiteSpace(settings.BotUsername);
+            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenDone = !string.IsNullOrWhiteSpace(settings.TwitchToken);
+            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationDone = !string.IsNullOrWhiteSpace(settings.AS2Location);
+            Globals.GlobalEntites.Add("TwitchSettings", settings);
         }
 
         if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))

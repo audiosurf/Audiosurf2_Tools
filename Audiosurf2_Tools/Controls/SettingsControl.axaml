@@ -106,15 +106,49 @@
                              Text="{Binding  TwitchMaxQueueItemsUntilDuplicationsAllowed}" />
                 </StackPanel>
             </GroupBox>
-            <Button Margin="0,5"
-                    Command="{Binding SaveSettings}">
-                <StackPanel Orientation="Horizontal"
-                            Spacing="5">
-                    <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/save.png" />
-                    <TextBlock VerticalAlignment="Center"
-                               Text="Save Settings" />
-                </StackPanel>
-            </Button>
+            <StackPanel Margin="0,5"
+                        Orientation="Horizontal"
+                        Spacing="5">
+                <Button Command="{Binding SaveSettingsAsync}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/save.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Save Settings" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="0,5"
+                        Command="{Binding ExportSettingsAsync}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/export.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Export Settings" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="0,5"
+                        Command="{Binding  ImportSettingsAsync}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/import.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Import Settings" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="0,5"
+                        Background="#662222"
+                        Command="{Binding DeleteAllAndExitAsync}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/delete.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Delete Everything and Exit" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
