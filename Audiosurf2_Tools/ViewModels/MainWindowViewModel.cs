@@ -40,7 +40,7 @@ public class MainWindowViewModel : ViewModelBase
         PlaylistEditorHighlight = Brushes.Transparent;
         TwitchBotHighlight = Brushes.Transparent;
         SettingsHighlight = Brushes.Transparent;
-        OpenPlaylistEditor();
+        OpenTwitchBot();
         _ = Task.Run(LoadCreateSettingsAsync);
     }
 
@@ -134,19 +134,23 @@ public class MainWindowViewModel : ViewModelBase
             cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         }
 
-        SettingsViewModel.TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
-        SettingsViewModel.TwitchMaxQueueItemsUntilDuplicationsAllowed = cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
-        SettingsViewModel.TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
-        SettingsViewModel.TwitchMaxQueueSize = cfg.TwitchMaxQueueSize;
-        SettingsViewModel.TwitchRequestCoolDown = cfg.TwitchRequestCoolDown;
-        SettingsViewModel.TwitchMaxSongLengthSeconds = cfg.TwitchMaxSongLengthSeconds;
-        SettingsViewModel.TwitchQueueMaxLengthEnabled = cfg.TwitchQueueMaxLengthEnabled;
-        SettingsViewModel.TwitchQueueMaxLength = cfg.TwitchQueueMaxLength;
-        SettingsViewModel.TwitchQueueCutOffTimeEnabled = cfg.TwitchQueueCutOffTimeEnabled;
-        SettingsViewModel.TwitchQueueCutOffTimeDate = cfg.TwitchQueueCutOffTime.Date;
-        SettingsViewModel.TwitchQueueCutOffTimeTime = cfg.TwitchQueueCutOffTime.TimeOfDay;
-        SettingsViewModel.TwitchEnableLocalRequests = cfg.TwitchEnableLocalRequests;
-        SettingsViewModel.TwitchLocalRequestPath = cfg.TwitchLocalRequestPath;
+        Dispatcher.UIThread.Post(() =>
+        {
+            SettingsViewModel.TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
+            SettingsViewModel.TwitchMaxQueueItemsUntilDuplicationsAllowed =
+                cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
+            SettingsViewModel.TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
+            SettingsViewModel.TwitchMaxQueueSize = cfg.TwitchMaxQueueSize;
+            SettingsViewModel.TwitchRequestCoolDown = cfg.TwitchRequestCoolDown;
+            SettingsViewModel.TwitchMaxSongLengthSeconds = cfg.TwitchMaxSongLengthSeconds;
+            SettingsViewModel.TwitchQueueMaxLengthEnabled = cfg.TwitchQueueMaxLengthEnabled;
+            SettingsViewModel.TwitchQueueMaxLength = cfg.TwitchQueueMaxLength;
+            SettingsViewModel.TwitchQueueCutOffTimeEnabled = cfg.TwitchQueueCutOffTimeEnabled;
+            SettingsViewModel.TwitchQueueCutOffTimeDate = cfg.TwitchQueueCutOffTime.Date;
+            SettingsViewModel.TwitchQueueCutOffTimeTime = cfg.TwitchQueueCutOffTime.TimeOfDay;
+            SettingsViewModel.TwitchEnableLocalRequests = cfg.TwitchEnableLocalRequests;
+            SettingsViewModel.TwitchLocalRequestPath = cfg.TwitchLocalRequestPath;
+        });
     }
 
     public async Task LoadTwitchSettingsVMAsync()
@@ -171,7 +175,7 @@ public class MainWindowViewModel : ViewModelBase
         }
 
         if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
-            await TwitchBotViewModel.ReloadRequestsPlaylist();
+            await Dispatcher.UIThread.InvokeAsync(TwitchBotViewModel.ReloadRequestsPlaylist);
 
         if (File.Exists(Path.Combine(settings!.AS2Location, "MoreFolders.json")))
         {

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using ATL;
 using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
+using Avalonia.Threading;
 using Dapper;
 using PlaylistsNET.Content;
 using PlaylistsNET.Models;
@@ -64,14 +65,14 @@ public class TwitchBotViewModel : ViewModelBase
 
     private void RequestsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Add)
-        {
-            var tmSpn = TimeSpan.Zero;
-            var times = Requests.Select(x => x.Duration);
-            tmSpn = times.Aggregate(tmSpn, (current, duration) => current + duration);
-            RequestsLength = tmSpn;
-            _ = Task.Run(RebuildRequestsM3U);
-        }
+        if (e.Action is not (NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Add)) 
+            return;
+        
+        var tmSpn = TimeSpan.Zero;
+        var times = Requests.Select(x => x.Duration);
+        tmSpn = times.Aggregate(tmSpn, (current, duration) => current + duration);
+        RequestsLength = tmSpn;
+        _ = Task.Run(RebuildRequestsM3U);
     }
 
     public async Task ConnectAsync()
@@ -179,8 +180,11 @@ public class TwitchBotViewModel : ViewModelBase
         
         if (!RequestsOpen)
         {
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} Requests are currently disabled!");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Requests are currently disabled!"); 
+            });
             return false;
         }
 
@@ -189,8 +193,11 @@ public class TwitchBotViewModel : ViewModelBase
         var fullDuration = new TimeSpan(durationUpcoming + durationPast);
         if (cfg!.TwitchQueueMaxLengthEnabled && cfg.TwitchQueueMaxLength < fullDuration)
         {
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} The queue has reached the maximum length, no more requests fit in!");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} The queue has reached the maximum length, no more requests fit in!");
+            });
             return false;
         }
         
@@ -198,8 +205,11 @@ public class TwitchBotViewModel : ViewModelBase
         {
             if ((DateTimeOffset.Now - requestTimes[username]).TotalSeconds < cfg.TwitchRequestCoolDown)
             {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} You're on cooldown! Wait {(cfg.TwitchRequestCoolDown - (DateTimeOffset.Now - requestTimes[username]).TotalSeconds).ToString("##")} more seconds to request again!");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} You're on cooldown! Wait {(cfg.TwitchRequestCoolDown - (DateTimeOffset.Now - requestTimes[username]).TotalSeconds).ToString("##")} more seconds to request again!");
+                });
                 return false;
             }
         }
@@ -208,16 +218,22 @@ public class TwitchBotViewModel : ViewModelBase
         {
             if ((DateTimeOffset.Now + RequestsLength) > cfg.TwitchQueueCutOffTime)
             {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} Queue has reached cut-off time, no more requests fit in!");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Queue has reached cut-off time, no more requests fit in!");
+                });
                 return false;
             }
         }
 
         if (Requests.Count >= cfg.TwitchMaxQueueSize)
         {
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} Queue is full, please try again later!");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Queue is full, please try again later!");
+            });
             return false;
         }
 
