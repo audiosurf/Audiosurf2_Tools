@@ -128,23 +128,28 @@
                     
                     <controls:InstallerControl Grid.Row="1"
                                                DataContext="{Binding InstallerViewModel}"
-                                               IsVisible="{Binding IsOpen}" />
+                                               IsVisible="{Binding IsOpen}"
+                                               IsEnabled="{Binding IsOpen}"/>
 
                     <controls:MoreFoldersControl Grid.Row="1"
                                                  DataContext="{Binding MoreFoldersViewModel}"
-                                                 IsVisible="{Binding IsOpen}" />
+                                                 IsVisible="{Binding IsOpen}"
+                                                 IsEnabled="{Binding IsOpen}"/>
                     
                     <controls:PlaylistEditorControl Grid.Row="1"
                                                     DataContext="{Binding PlaylistEditorViewModel}"
-                                                    IsVisible="{Binding IsOpen}" />
+                                                    IsVisible="{Binding IsOpen}"
+                                                    IsEnabled="{Binding IsOpen}"/>
 
                     <controls:TwitchBotControl Grid.Row="1"
                                                DataContext="{Binding TwitchBotViewModel}"
-                                               IsVisible="{Binding IsOpen}" />
+                                               IsVisible="{Binding IsOpen}"
+                                               IsEnabled="{Binding IsOpen}"/>
 
                     <controls:SettingsControl Grid.Row="1"
                                               DataContext="{Binding SettingsViewModel}"
-                                              IsVisible="{Binding IsOpen}" />
+                                              IsVisible="{Binding IsOpen}"
+                                              IsEnabled="{Binding IsOpen}"/>
 
                 </Grid>
 
@@ -153,12 +158,14 @@
         </SplitView>
 
         <Grid Background="#aa000000"
-              IsVisible="{Binding IsLoading}">
+              IsVisible="{Binding IsLoading}"
+              IsEnabled="{Binding IsLoading}">
             <StackPanel HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Orientation="Vertical"
                         Spacing="10">
-                <ProgressRing IsIndeterminate="True"/>
+                <ProgressRing IsIndeterminate="{Binding IsLoading}"
+                              IsEnabled="{Binding IsLoading}"/>
                 <TextBlock Text="Loading..."/> 
             </StackPanel>
         </Grid>

@@ -34,12 +34,13 @@
         <ProgressRing Grid.Column="3"
                       Grid.Row="0"
                       Margin="5"
+                      IsEnabled="{Binding !IsDone}"
                       Height="20"
                       Width="20"
                       IsVisible="{Binding !IsDone}"
                       StrokeWidth="10"
                       ForegroundColor="Orange"
-                      IsIndeterminate="True"/>
+                      IsIndeterminate="{Binding !IsDone}"/>
         
         <Button Grid.Column="4"
                 Grid.Row="0"
