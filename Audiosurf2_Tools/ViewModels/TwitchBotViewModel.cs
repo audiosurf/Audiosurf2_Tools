@@ -108,7 +108,7 @@ public class TwitchBotViewModel : ViewModelBase
         {
             if (IsConnected)
             {
-                _ = Task.Run(requestCheckLoop);
+                _ = Task.Run(RequestCheckLoop);
             }
         }
     }
@@ -144,33 +144,34 @@ public class TwitchBotViewModel : ViewModelBase
     {
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         var prefix = cfg!.TwitchCommandPrefix;
-        if (e.ChatMessage.Message.ToLower().StartsWith(prefix + "sr "))
+        if (!e.ChatMessage.Message.ToLower().StartsWith(prefix + "sr ")) 
+            return;
+        
+        if(!InitialCanRequestChecks(e.ChatMessage.Username))
+            return;
+        
+        var length = (prefix + "sr ").Length;
+        var reg =
+            @"(?i)(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})(?-i)";
+
+        var match = Regex.Match(e.ChatMessage.Message.Substring(length), reg);
+        if (match.Success && match.Groups[1].Value.Length == 11)
         {
-            if(!InitialCanRequestChecks(e.ChatMessage.Username))
+            _ = Task.Run(() => HandleSongRequestAsync(match.Groups[1].Value, e.ChatMessage.Username));
+        }
+
+        else if (cfg.TwitchEnableLocalRequests)
+        {
+            if (!File.Exists(Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length))))
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{e.ChatMessage.Username} File not found, did you type the name wrong? (you also need to type the extension like .mp3 or .flac)");
                 return;
-            var length = (prefix + "sr ").Length;
-            var reg =
-                @"(?i)(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})(?-i)";
-
-            var match = Regex.Match(e.ChatMessage.Message.Substring(length), reg);
-            if (match.Success && match.Groups[1].Value.Length == 11)
-            {
-                _ = Task.Run(() => handleSongRequestAsync(match.Groups[1].Value, e.ChatMessage.Username));
             }
-
-            else if (cfg.TwitchEnableLocalRequests)
-            {
-                if (!File.Exists(Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length))))
-                {
-                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                        $"@{e.ChatMessage.Username} File not found, did you type the name wrong? (you also need to type the extension like .mp3 or .flac)");
-                    return;
-                }
-                _ = Task.Run(() =>
-                    handleSongRequestAsync(
-                        Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length)),
-                        e.ChatMessage.Username, false));
-            }
+            _ = Task.Run(() =>
+                HandleSongRequestAsync(
+                    Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length)),
+                    e.ChatMessage.Username, false));
         }
     }
 
@@ -255,7 +256,8 @@ public class TwitchBotViewModel : ViewModelBase
             if (vid.Path.Contains("https://"))
             {
                 var video = await Consts.YoutubeClient.Videos.GetAsync(vid.Path);
-                Requests.Add(new TwitchRequestItem(Requests,
+                Requests.Add(new TwitchRequestItem(Requests, 
+                    PastRequests,
                     video.Title,
                     video.Author.Title,
                     video.Url,
@@ -265,7 +267,8 @@ public class TwitchBotViewModel : ViewModelBase
             else if (cfg!.TwitchEnableLocalRequests && File.Exists(vid.Path))
             {
                 var video = new Track(vid.Path);
-                Requests.Add(new TwitchRequestItem(Requests,
+                Requests.Add(new TwitchRequestItem(Requests, 
+                    PastRequests,
                     video.Title,
                     video.Artist,
                     video.Path,
@@ -325,21 +328,27 @@ public class TwitchBotViewModel : ViewModelBase
         await File.WriteAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"), plsText);
     }
 
-    private async Task handleSongRequestAsync(string id, string username, bool isYoutube = true)
+    public async Task HandleSongRequestAsync(string id, string username, bool isYoutube = true)
     {
         //more checks here
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         var mostRecent = PastRequests.Take(cfg!.TwitchMaxRecentAgeBeforeDuplicateError);
         if (mostRecent.Any(x => x.Location.Contains(id)))
         {
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} This was recently played!");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} This was recently played!");
+            });
             return;
         }
         if (Requests.TakeLast(cfg!.TwitchMaxQueueItemsUntilDuplicationsAllowed).Any(x => x.Location.Contains(id)))
         {
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} This is already in the queue!");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} This is already in the queue!");
+            });
             return;
         }
         if (isYoutube)
@@ -348,22 +357,31 @@ public class TwitchBotViewModel : ViewModelBase
 
             if (song.Duration == null)
             {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} Livestreams are not allowed!");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Livestreams are not allowed!");
+                });
                 return;
             }
 
             if (song.Duration?.TotalSeconds > cfg.TwitchMaxSongLengthSeconds)
             {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                });
                 return;
             }
 
-            Requests.Add(new TwitchRequestItem(Requests, song.Title, song.Author.Title, song.Url, username,
+            Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title, song.Author.Title, song.Url, username,
                 song.Duration ?? TimeSpan.Zero));
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} added {song.Title} to the queue!");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} added {song.Title} to the queue!");
+            });
         }
 
         else
@@ -372,15 +390,21 @@ public class TwitchBotViewModel : ViewModelBase
 
             if (song.Duration > cfg.TwitchMaxSongLengthSeconds)
             {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                });
                 return;
             }
 
-            Requests.Add(new TwitchRequestItem(Requests, song.Title ?? id.Split('\\').Last(), song.Artist, id, username,
+            Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title ?? id.Split('\\').Last(), song.Artist, id, username,
                 TimeSpan.FromSeconds(song.Duration)));
-            _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                $"@{username} added {song.Title ?? id.Split('\\').Last()} to the queue!");
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} added {song.Title ?? id.Split('\\').Last()} to the queue!");
+            });
         }
         
         
@@ -390,7 +414,7 @@ public class TwitchBotViewModel : ViewModelBase
             requestTimes.TryAdd(username, DateTimeOffset.Now);
     }
 
-    private async Task requestCheckLoop()
+    public async Task RequestCheckLoop()
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var plsLocation = Path.Combine(appdata, "AS2Tools");
@@ -410,9 +434,9 @@ public class TwitchBotViewModel : ViewModelBase
                 var latestPlayedLocalEntryByLastPlayTime =
                     await con.QueryFirstOrDefaultAsync<AS2DBLocalEntry>(
                         "SELECT * FROM songs ORDER BY lastplaytime DESC LIMIT 1");
-                var latestPlayedLocalEntryBySongId =
-                    await con.QueryFirstOrDefaultAsync<AS2DBLocalEntry>(
-                        "SELECT * FROM songs ORDER BY songid DESC LIMIT 1");
+                //var latestPlayedLocalEntryBySongId =
+                //    await con.QueryFirstOrDefaultAsync<AS2DBLocalEntry>(
+                //        "SELECT * FROM songs ORDER BY songid DESC LIMIT 1");
                 if (latestPlayedYoutubeEntry == null)
                     throw new SqlNullValueException("CheckLoop: Latest song is null");
 

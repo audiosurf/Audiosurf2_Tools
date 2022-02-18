@@ -11,6 +11,7 @@ namespace Audiosurf2_Tools.Models;
 public class TwitchRequestItem : ReactiveObject
 {
     private readonly Collection<TwitchRequestItem> _parentCollection;
+    private readonly Collection<TwitchRequestItem> _parentPastCollection;
     
     [Reactive] public string Title { get; set; }
     [Reactive] public string Channel { get; set; }
@@ -23,9 +24,10 @@ public class TwitchRequestItem : ReactiveObject
         
     }
     
-    public TwitchRequestItem(Collection<TwitchRequestItem> parentCollection, string title, string channel, string location, string requester, TimeSpan duration = new TimeSpan())
+    public TwitchRequestItem(Collection<TwitchRequestItem> parentCollection, Collection<TwitchRequestItem> parentPastCollection, string title, string channel, string location, string requester, TimeSpan duration = new TimeSpan())
     {
         _parentCollection = parentCollection;
+        _parentPastCollection = parentPastCollection;
         Title = title;
         Channel = channel;
         Duration = duration;
@@ -45,6 +47,12 @@ public class TwitchRequestItem : ReactiveObject
     public void Remove()
     {
         _parentCollection.Remove(this);
+    }
+
+    public void RemoveAndCount()
+    {
+        _parentPastCollection.Insert(0, this);
+        Remove();
     }
     
     public void MoveUp()

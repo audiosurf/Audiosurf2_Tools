@@ -178,7 +178,7 @@
                      Items="{Binding Requests}">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="models:TwitchRequestItem">
-                        <miniControls:RequestItemControl DataContext="{Binding}" />
+                        <miniControls:RequestItemControl DataContext="{Binding}"/>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
