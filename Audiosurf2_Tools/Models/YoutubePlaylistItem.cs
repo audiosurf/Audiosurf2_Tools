@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Audiosurf2_Tools.Entities;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using YoutubeExplode.Common;
 using YoutubeExplode.Videos;
 
@@ -25,9 +27,17 @@ public class YoutubePlaylistItem : BasePlaylistItem
         Title = video.Title;
         Artist = video.Author.Title;
         Duration = video.Duration.GetValueOrDefault();
-        var coverStream = await Consts.HttpClient.GetByteArrayAsync(video.Thumbnails.GetWithHighestResolution().Url);
-        CoverImage = new Bitmap(new MemoryStream(coverStream) { Position = 0 });
         Path = video.Url;
+        _ = Task.Run(() => FillImageAsync(video.Thumbnails.MinBy(x => x.Resolution.Area)!.Url));
         IsLoaded = true;
+    }
+
+    private async Task FillImageAsync(string url)
+    {
+        var coverStream = await Consts.HttpClient.GetByteArrayAsync(url);
+        Dispatcher.UIThread.Post(() =>
+        {
+            CoverImage = new Bitmap(new MemoryStream(coverStream) { Position = 0 });
+        });
     }
 }

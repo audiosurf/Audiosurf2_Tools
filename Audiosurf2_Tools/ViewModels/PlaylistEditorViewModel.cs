@@ -62,7 +62,7 @@ public class PlaylistEditorViewModel : ViewModelBase
         if (vid != null)
         {
             var itm = new YoutubePlaylistItem(vid, PlaylistItems);
-            await itm.LoadInfoAsync();
+            _ = Task.Run(itm.LoadInfoAsync);
             PlaylistItems.Add(itm);
         }
         else if (pls != null)
@@ -166,7 +166,7 @@ public class PlaylistEditorViewModel : ViewModelBase
             if (match.Success)
             {
                 var itm = new YoutubePlaylistItem(entry.Path, PlaylistItems);
-                await itm.LoadInfoAsync();
+                _ = Task.Run(itm.LoadInfoAsync);
                 PlaylistItems.Add(itm);
             }
             else if (File.Exists(entry.Path.Replace("file:///", "").Replace('/', '\\')))
