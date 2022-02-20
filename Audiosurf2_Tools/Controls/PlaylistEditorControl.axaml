@@ -35,7 +35,8 @@
                              VerticalContentAlignment="Center"
                              Watermark="Youtube URL (Video or Playlist)"
                              Text="{Binding InputLink, Mode=TwoWay}"
-                             BorderThickness="0" />
+                             BorderThickness="0" 
+                             KeyDown="InputElement_OnKeyDown"/>
                     <Button Grid.Column="1"
                             VerticalAlignment="Stretch"
                             VerticalContentAlignment="Center"

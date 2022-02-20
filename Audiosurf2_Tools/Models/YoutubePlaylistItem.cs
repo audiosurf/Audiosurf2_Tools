@@ -39,5 +39,6 @@ public class YoutubePlaylistItem : BasePlaylistItem
         {
             CoverImage = new Bitmap(new MemoryStream(coverStream) { Position = 0 });
         });
+        GC.Collect();
     }
 }
