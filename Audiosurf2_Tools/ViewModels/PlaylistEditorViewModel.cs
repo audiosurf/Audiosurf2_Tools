@@ -67,17 +67,22 @@ public class PlaylistEditorViewModel : ViewModelBase
         }
         else if (pls != null)
         {
-            var plsItems = await Consts.YoutubeClient.Playlists.GetVideosAsync(pls.GetValueOrDefault());
-            foreach (var item in plsItems)
+            await foreach (var item in Consts.YoutubeClient.Playlists.GetVideosAsync(pls.GetValueOrDefault()))
             {
                 try
                 {
-                    var itm = new YoutubePlaylistItem(item.Url, PlaylistItems);
-                    itm.Title = item.Title;
-                    itm.Artist = item.Author.Title;
-                    itm.Duration = item.Duration.GetValueOrDefault();
-                    var covData = await Consts.HttpClient.GetByteArrayAsync(item.Thumbnails.GetWithHighestResolution().Url);
-                    itm.CoverImage = new Bitmap(new MemoryStream(covData) { Position = 0 });
+                    var itm = new YoutubePlaylistItem(item.Url, PlaylistItems)
+                    {
+                        Title = item.Title,
+                        Artist = item.Author.Title,
+                        Duration = item.Duration.GetValueOrDefault()
+                    };
+                    _ = Task.Run(async () =>
+                    {
+                        var covData =
+                            await Consts.HttpClient.GetByteArrayAsync(item.Thumbnails.GetWithHighestResolution().Url);
+                        itm.CoverImage = new Bitmap(new MemoryStream(covData) {Position = 0});
+                    });
                     itm.IsLoaded = true;
                     PlaylistItems.Add(itm);
                 }
@@ -88,6 +93,7 @@ public class PlaylistEditorViewModel : ViewModelBase
             }
         }
 
+        this.RaisePropertyChanged(nameof(TotalDuration));
         InputLink = "";
     }
 

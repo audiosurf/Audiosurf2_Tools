@@ -175,7 +175,7 @@
                 <TextBlock HorizontalAlignment="Center"
                            Text="Duration:" />
                 <TextBlock HorizontalAlignment="Center"
-                           Text="{Binding TotalDuration, StringFormat=\{0:hh\\:mm\\:ss\}}" />
+                           Text="{Binding TotalDuration, StringFormat=\{0:d\\.hh\\:mm\\:ss\}}" />
                 <Separator BorderBrush="#FF333333"
                            BorderThickness="1" />
             </StackPanel>
