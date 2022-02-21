@@ -43,7 +43,7 @@ public class TwitchBotControl : UserControl
             Title = "Requests PopOut",
             Content = popOut,
             DataContext = new TwitchPopOutViewModel(),
-            Height = cfg.Height,
+            Height = cfg!.Height,
             Width = cfg.Width
         };
         wnd.Show(mainWnd);

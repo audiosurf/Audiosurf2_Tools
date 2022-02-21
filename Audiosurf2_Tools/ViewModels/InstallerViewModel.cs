@@ -79,7 +79,12 @@ public class InstallerViewModel : ViewModelBase
 
         var as2Ver = FileVersionInfo.GetVersionInfo(Path.Combine(GameLocation, "Audiosurf2.exe"));
 
-        if (as2Ver.FileVersion?.StartsWith("2017") == true)
+        if (as2Ver.FileVersion?.StartsWith("2017.4.40") == true)
+        {
+            UnityVersion = as2Ver.FileVersion;
+            BetaChannel = "bleedingedge";
+        }
+        else if (as2Ver.FileVersion?.StartsWith("2017") == true)
         {
             UnityVersion = as2Ver.FileVersion;
             BetaChannel = "none";

@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Data.SQLite;
 using System.Data.SqlTypes;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ATL;
@@ -17,8 +15,8 @@ using Avalonia.Threading;
 using Dapper;
 using PlaylistsNET.Content;
 using PlaylistsNET.Models;
+using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
-using Svg.FilterEffects;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -34,6 +32,11 @@ public class TwitchBotViewModel : ViewModelBase
     [Reactive] private bool IsConnected { get; set; }
     [Reactive] public bool RequestsOpen { get; set; } = true;
     [Reactive] public bool IsOpen { get; set; }
+    public int RequestSelectionDummy
+    {
+        get => -1;
+        set => this.RaisePropertyChanged(nameof(RequestSelectionDummy));
+    }
 
     [Reactive] public ObservableCollection<string> ChatMessages { get; set; }
     [Reactive] public ObservableCollection<TwitchRequestItem> Requests { get; set; }
