@@ -5,7 +5,9 @@
              xmlns:viewModels="clr-namespace:Audiosurf2_Tools.ViewModels"
              xmlns:miniControls="clr-namespace:Audiosurf2_Tools.MiniControls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="550"
-             x:Class="Audiosurf2_Tools.Controls.PlaylistEditorControl">
+             x:Class="Audiosurf2_Tools.Controls.PlaylistEditorControl"
+             x:DataType="viewModels:PlaylistEditorViewModel"
+             x:CompileBindings="True">
 
     <UserControl.DataContext>
         <viewModels:PlaylistEditorViewModel />
@@ -42,8 +44,8 @@
                             VerticalContentAlignment="Center"
                             HorizontalAlignment="Center"
                             HorizontalContentAlignment="Center"
-                            Command="{Binding AddYoutubeCommand}"
-                            CommandParameter="{Binding InputLink}"
+                            Command="{ReflectionBinding AddYoutubeCommand}"
+                            CommandParameter="{ReflectionBinding InputLink}"
                             Content="Add" />
                 </Grid>
             </Border>
@@ -56,8 +58,8 @@
                     HorizontalAlignment="Center"
                     HorizontalContentAlignment="Center"
                     Content="Browse"
-                    Command="{Binding BrowseLocalAsync}"
-                    CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
+                    Command="{ReflectionBinding BrowseLocalAsync}"
+                    CommandParameter="{ReflectionBinding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
 
             <Button Grid.Column="2"
                     Margin="1.5,0,1.5,2.5"
@@ -68,7 +70,7 @@
                     HorizontalAlignment="Center"
                     HorizontalContentAlignment="Center"
                     Content="Remove All"
-                    Command="{Binding RemoveAll}" />
+                    Command="{ReflectionBinding RemoveAll}" />
         </Grid>
 
         <Border Grid.Column="1"
@@ -122,30 +124,30 @@
                         VerticalContentAlignment="Center"
                         Height="35"
                         Content="New"
-                        Command="{Binding NewPlaylist}" />
+                        Command="{ReflectionBinding NewPlaylist}" />
                 <Button HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         VerticalAlignment="Center"
                         VerticalContentAlignment="Center"
                         Height="35"
                         Content="Open"
-                        Command="{Binding OpenPlaylistAsync}"
-                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
+                        Command="{ReflectionBinding OpenPlaylistAsync}"
+                        CommandParameter="{ReflectionBinding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
                 <Button HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         VerticalAlignment="Center"
                         VerticalContentAlignment="Center"
                         Height="35"
                         Content="Save"
-                        Command="{Binding SavePlaylistAsync}" />
+                        Command="{ReflectionBinding SavePlaylistAsync}" />
                 <Button HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"
                         VerticalAlignment="Center"
                         VerticalContentAlignment="Center"
                         Height="35"
                         Content="Save As"
-                        Command="{Binding SavePlaylistAsAsync}"
-                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
+                        Command="{ReflectionBinding SavePlaylistAsAsync}"
+                        CommandParameter="{ReflectionBinding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
                 <Separator BorderBrush="#FF333333"
                            BorderThickness="1" />
                 <TextBlock HorizontalAlignment="Center"
