@@ -26,6 +26,7 @@ This tool makes it easy to create playlists that combine both, YouTube and local
 
 ## <u> Twitch Bot </u>
 
-A Twitch bot for (YouTube) song requests with a pop-out requests window (for use with OBS for example)
-
-<img src="Assets/twitchbot.png" alt="Image of the Twitch bot UIs">
+A Twitch bot for song requests with a pop-out requests window (for use with OBS for example)
+<img src="Assets/twitchbotsetup.png" alt="Image of the Twitch bot setup">
+<img src="Assets/twitchbot.png" alt="Image of the Twitch bot UIs" Height="325">
+<img src="Assets/twitchbotpopout.png" alt="Image of the Twitch bot UIs" Height="325">
