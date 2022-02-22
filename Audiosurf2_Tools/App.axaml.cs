@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+using Audiosurf2_Tools.Models;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;

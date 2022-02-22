@@ -1,143 +1,140 @@
-﻿using ReactiveUI;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Reactive;
-using System.Text;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
+using Audiosurf2_Tools.Entities;
 using Avalonia.Controls;
-using Microsoft.Win32;
+using Avalonia.Threading;
+using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
+using Console = System.Console;
 
-namespace Audiosurf2_Tools.ViewModels
+namespace Audiosurf2_Tools.ViewModels;
+
+public class InstallerViewModel : ViewModelBase
 {
-    public class InstallerViewModel : ViewModelBase
+    [Reactive] public bool IsOpen { get; set; }
+
+    [Reactive] public string GameLocation { get; set; }
+    [Reactive] public string StatusText { get; set; } = "nothing";
+    [Reactive] public int ProgressValue { get; set; }
+    [Reactive] public ReactiveCommand<Unit, Unit> InstallCommand { get; set; }
+
+    [Reactive] public bool IsGameInstalled { get; set; }
+    [Reactive] public bool IsPatchInstalled { get; set; }
+
+    [Reactive] public string UnityVersion { get; set; }
+    [Reactive] public string BetaChannel { get; set; }
+
+    [Reactive] public string PatchVersion { get; set; }
+    [Reactive] public string PatchChannel { get; set; }
+
+    public InstallerViewModel()
     {
-        private HttpClient _client = new();
-        private string _gameLocation = "";
-        private int _progressValue = 0;
-        private string _statusText = "";
+        var watCmd = ReactiveCommand.CreateFromTask<string>(FindGameAndPatchVersionAsync);
+        this.WhenAnyValue(x => x.GameLocation)
+            .InvokeCommand(watCmd);
+        var canInstall = this.WhenAny(x => x.GameLocation, (thing) => !string.IsNullOrWhiteSpace(thing.Value));
+        InstallCommand = ReactiveCommand.CreateFromTask(InstallPatchAsync, canInstall);
+    }
 
-        public string GameLocation
+    public async Task AutoFindAsync()
+    {
+        GameLocation = await ToolUtils.GetGameDirectoryAsync();
+    }
+    
+    public async Task BrowserLocation(Window parent)
+    {
+        var openFol = new OpenFolderDialog()
         {
-            get => _gameLocation;
-            set => this.RaiseAndSetIfChanged(ref _gameLocation, value);
-        }
-
-        public int ProgressValue
+            Directory = "C:\\",
+            Title = "Select the Audiosurf 2 install location"
+        };
+        var result = await openFol.ShowAsync(parent);
+        if (!string.IsNullOrWhiteSpace(result))
         {
-            get => _progressValue;
-            set => this.RaiseAndSetIfChanged(ref _progressValue, value);
-        }
-
-        public string StatusText
-        {
-            get => _statusText;
-            set => this.RaiseAndSetIfChanged(ref _statusText, value);
-        }
-
-        public ReactiveCommand<Unit, Unit> AutoFindCommand { get; }
-        public ReactiveCommand<Window, Unit> BrowseCommand { get; }
-        public ReactiveCommand<Unit, Unit> InstallCommand { get; }
-
-        public InstallerViewModel()
-        {
-            AutoFindCommand = ReactiveCommand.CreateFromTask(autoFindGameFolderAsync);
-            BrowseCommand = ReactiveCommand.CreateFromTask((Window param) => browseGameFolderAsync(param));
-            InstallCommand = ReactiveCommand.CreateFromTask(installPatchAsync);
-        }
-
-        private async Task autoFindGameFolderAsync()
-        {
-            if (Directory.Exists("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Audiosurf 2"))
+            if (Directory.Exists(result))
             {
-                GameLocation = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Audiosurf 2";
+                var dirInfo = new DirectoryInfo(result);
+                if (dirInfo.GetFiles().Any(x => x.Name.Contains("Audiosurf2.exe")))
+                {
+                    IsGameInstalled = false;
+                    IsPatchInstalled = false;
+                    GameLocation = result;
+                }
+            }
+        }
+    }
+
+    public async Task FindGameAndPatchVersionAsync(string x)
+    {
+        if (string.IsNullOrWhiteSpace(GameLocation))
+            return;
+        IsGameInstalled = true;
+
+        var as2Ver = FileVersionInfo.GetVersionInfo(Path.Combine(GameLocation, "Audiosurf2.exe"));
+
+        if (as2Ver.FileVersion?.StartsWith("2017.4.40") == true)
+        {
+            UnityVersion = as2Ver.FileVersion;
+            BetaChannel = "bleedingedge";
+        }
+        else if (as2Ver.FileVersion?.StartsWith("2017") == true)
+        {
+            UnityVersion = as2Ver.FileVersion;
+            BetaChannel = "none";
+        }
+        else if (as2Ver.FileVersion?.StartsWith("5.5") == true)
+        {
+            UnityVersion = as2Ver.FileVersion;
+            BetaChannel = "beforejune2018_xp";
+        }
+        else if (as2Ver.FileVersion?.StartsWith("5.2") == true)
+        {
+            UnityVersion = as2Ver.FileVersion;
+            BetaChannel = "before_videosurf";
+        }
+
+        if (Directory.Exists(Path.Combine(GameLocation, "Audiosurf2_Data\\patchupdater")))
+        {
+            IsPatchInstalled = true;
+            var version = await File.ReadAllTextAsync(Path.Combine(GameLocation,
+                "Audiosurf2_Data\\patchupdater\\installedversion.txt"));
+            if (version.Contains('.'))
+            {
+                PatchVersion = version;
+                PatchChannel = "latest";
             }
             else
             {
-                try
-                {
-                    //GameID: 235800
-                    object steamPath = Registry.GetValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Valve\\Steam", "InstallPath", null) ?? throw new KeyNotFoundException("Steam installation not found");
-                    var vdfText = await File.ReadAllLinesAsync(Path.Combine(steamPath.ToString() ?? throw new InvalidOperationException("Invalid Steam install path"), "config\\libraryfolders.vdf"));
-                    var gameLineText = vdfText.FirstOrDefault(x => x.Contains("\"235800\"")) ?? throw new DirectoryNotFoundException("Game isn't listed as installed in Steam");
-                    var lineIndex = Array.IndexOf(vdfText, gameLineText);
-                    for (int i = lineIndex - 1; i >= 0; i--)
-                    {
-                        if (vdfText[i].Contains("\"path\""))
-                        {
-                            vdfText[i] = vdfText[i].Replace("\"path\"", "");
-                            var libraryPath = vdfText[i][(vdfText[i].IndexOf('\"') + 1)..vdfText[i].LastIndexOf('\"')];
-                            libraryPath = libraryPath.Replace("\\\\", "\\");
-                            GameLocation = Path.Combine(libraryPath, "steamapps\\common\\Audiosurf 2");
-                            break;
-                        }
-                    }
-
-                    if (string.IsNullOrWhiteSpace(GameLocation))
-                        throw new DirectoryNotFoundException("Unable to find Audiosurf 2 directory");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
-                    //MessageBox here with error or something
-                }
+                PatchVersion = version;
+                PatchChannel = "beta patch";
             }
         }
+    }
 
-        private async Task browseGameFolderAsync(Window parent)
+    public async Task InstallPatchAsync()
+    {
+        try
         {
-            var dialog = new OpenFolderDialog();
-            dialog.Directory = "C:\\";
-            dialog.Title = "Select where Audiosurf 2 is installed (The one with Audiosurf2.exe)";
-            var selected = await dialog.ShowAsync(parent);
-            if (!string.IsNullOrWhiteSpace(selected) && Directory.Exists(selected))
-            {
-                var dir = new DirectoryInfo(selected);
-                if (dir.GetFiles().Any(x => x.Name == "Audiosurf2.exe"))
-                    GameLocation = selected;
-            }
-        }
-
-        private async Task installPatchAsync()
-        {
-            if (string.IsNullOrWhiteSpace(GameLocation) || !Directory.Exists(GameLocation))
-            {
-                StatusText = "Invalid Directory";
-                return;
-            }
-
-            var dir = new DirectoryInfo(GameLocation);
-            if (dir.GetFiles().All(x => x.Name != "Audiosurf2.exe"))
-            {
-                StatusText = "Game not found in directory";
-                return;
-            }
-
-            StatusText = "Downloading files...";
-            ProgressValue = 5;
-            using (var msg = new HttpRequestMessage(HttpMethod.Get, ""))
-            {
-                var data = await _client.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead);
-                ProgressValue = 20;
-                StatusText = "Reading data...";
-                using (var zip = new ZipArchive(await data.Content.ReadAsStreamAsync()))
-                {
-                    ProgressValue = 60;
-                    StatusText = "Extracting contents...";
-
-                    #if !DEBUG
-                    zip.ExtractToDirectory(GameLocation);              
-                    #endif
-                }
-            }
+            ProgressValue = 0;
+            StatusText = "Downloading Patch .zip";
+            var zipStream = await Consts.HttpClient.GetStreamAsync("https://aiae.ovh/newpatch/audiosurf2_newpatch.zip");
+            ProgressValue = 60;
+            StatusText = "Extracting files...";
+            var zip = new ZipArchive(zipStream);
+            zip.ExtractToDirectory(GameLocation, true);
             ProgressValue = 100;
-            StatusText = "Done! Have fun c:";
-            //await Task.Delay(2500);
-            //GC.Collect();
+            StatusText = "Done";
+        }
+        catch (Exception e)
+        {
+            StatusText = "Something went wrong: " + e;
         }
     }
 }

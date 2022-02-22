@@ -1,0 +1,41 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Audiosurf2_Tools.MiniControls.PopOutRequestItemControl">
+    
+    <StackPanel Orientation="Vertical"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}}"
+                Spacing="5">
+        <Separator Height="2.5"/>
+        <Separator HorizontalAlignment="Stretch"
+                   VerticalAlignment="Center"
+                   Margin="5,0"
+                   BorderBrush="#666666"
+                   BorderThickness="0.5" />
+        <TextBlock Text="{Binding RequestItem.Title}"
+                   FontSize="{Binding ParentContext.TitleFontSize, Mode=TwoWay}"
+                   Foreground="{Binding ParentContext.FontColor, Mode=TwoWay}"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding RequestItem.Channel}"
+                   FontSize="{Binding ParentContext.ChannelFontSize, Mode=TwoWay}"
+                   Foreground="{Binding ParentContext.FontColor, Mode=TwoWay}"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding RequestItem.Requester, StringFormat=Requested By: {0}}"
+                   FontSize="{Binding ParentContext.RequesterFontSize, Mode=TwoWay}"
+                   Foreground="{Binding ParentContext.FontColor, Mode=TwoWay}"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"/>
+        <Separator HorizontalAlignment="Stretch"
+                   VerticalAlignment="Center"
+                   Margin="5,0"
+                   BorderBrush="#666666"
+                   BorderThickness="0.5" />
+        <Separator Height="2.5"/>
+    </StackPanel>
+</UserControl>

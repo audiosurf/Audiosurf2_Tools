@@ -3,9 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Audiosurf2_Tools", "Audiosurf2_Tools\Audiosurf2_Tools.csproj", "{B9C0F823-CFB5-404F-8692-A09EDB9DC9A1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.csproj", "{3BD1CD02-D0B8-42A3-8CE0-A3DDF46D3F6A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Audiosurf2_Tools", "Audiosurf2_Tools\Audiosurf2_Tools.csproj", "{3DA5EA78-12E7-48C4-A621-D1B6C584FC96}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,14 +11,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B9C0F823-CFB5-404F-8692-A09EDB9DC9A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B9C0F823-CFB5-404F-8692-A09EDB9DC9A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B9C0F823-CFB5-404F-8692-A09EDB9DC9A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B9C0F823-CFB5-404F-8692-A09EDB9DC9A1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3BD1CD02-D0B8-42A3-8CE0-A3DDF46D3F6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3BD1CD02-D0B8-42A3-8CE0-A3DDF46D3F6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3BD1CD02-D0B8-42A3-8CE0-A3DDF46D3F6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3BD1CD02-D0B8-42A3-8CE0-A3DDF46D3F6A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DA5EA78-12E7-48C4-A621-D1B6C584FC96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DA5EA78-12E7-48C4-A621-D1B6C584FC96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DA5EA78-12E7-48C4-A621-D1B6C584FC96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DA5EA78-12E7-48C4-A621-D1B6C584FC96}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

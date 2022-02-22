@@ -1,186 +1,251 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reactive;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Audiosurf2_Tools.Views;
-using Avalonia.Controls;
-using JetBrains.Annotations;
-using Microsoft.Win32;
-using ReactiveUI;
+using Audiosurf2_Tools.Entities;
+using Audiosurf2_Tools.Models;
+using Avalonia.Media;
+using Avalonia.Threading;
+using ReactiveUI.Fody.Helpers;
 
-namespace Audiosurf2_Tools.ViewModels
+namespace Audiosurf2_Tools.ViewModels;
+
+public class MainWindowViewModel : ViewModelBase
 {
-    public class MainWindowViewModel : ViewModelBase
+    [Reactive] public InstallerViewModel InstallerViewModel { get; set; }
+    [Reactive] public MoreFoldersViewModel MoreFoldersViewModel { get; set; }
+    [Reactive] public PlaylistEditorViewModel PlaylistEditorViewModel { get; set; }
+    [Reactive] public TwitchBotViewModel TwitchBotViewModel { get; set; }
+    [Reactive] public SettingsViewModel SettingsViewModel { get; set; }
+    [Reactive] public bool OpenSidebar { get; set; } = true;
+    [Reactive] public bool IsLoading { get; set; } = true;
+    [Reactive] public ISolidColorBrush InstallerHighlight { get; set; }
+    [Reactive] public ISolidColorBrush MoreFoldersHighlight { get; set; }
+    [Reactive] public ISolidColorBrush PlaylistEditorHighlight { get; set; }
+    [Reactive] public ISolidColorBrush TwitchBotHighlight { get; set; }
+    [Reactive] public ISolidColorBrush SettingsHighlight { get; set; }
+
+    public MainWindowViewModel()
     {
-        private TwitchBotViewModel twitchBotViewModel;
-        private string _gamePath = "";
-        private bool _isInitializing = true;
-        private bool _gamePatched = false;
-        private Version _gamePatchVersion = new Version(0,0,0);
-        private string _initStatusText = "Loading...";
+        InstallerViewModel = new();
+        MoreFoldersViewModel = new();
+        PlaylistEditorViewModel = new();
+        TwitchBotViewModel = new();
+        SettingsViewModel = new();
+        InstallerHighlight = Brushes.Transparent;
+        MoreFoldersHighlight = Brushes.Transparent;
+        PlaylistEditorHighlight = Brushes.Transparent;
+        TwitchBotHighlight = Brushes.Transparent;
+        SettingsHighlight = Brushes.Transparent;
+        OpenTwitchBot();
+        _ = Task.Run(LoadCreateSettingsAsync);
+    }
 
-        public bool IsInitializing
+    public async Task LoadCreateSettingsAsync()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!Directory.Exists(Path.Combine(appdata, "AS2Tools")))
+            Directory.CreateDirectory(Path.Combine(appdata, "AS2Tools"));
+
+        try
         {
-            get => _isInitializing;
-            set => this.RaiseAndSetIfChanged(ref _isInitializing, value);
+            await InitSettingsAsync();
+            await LoadSettingsVMAsync();
+            await LoadInstallerVMAsync();
+            await LoadMoreFoldersVMAsync();
+            await LoadTwitchSettingsVMAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
         }
 
-        public bool GamePatched
+        IsLoading = false;
+    }
+
+
+    public async Task InitSettingsAsync()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\Settings.json")))
         {
-            get => _gamePatched;
-            set => this.RaiseAndSetIfChanged(ref _gamePatched, value);
+            var newCfg = new AppSettings();
+            var newCfgText = JsonSerializer.Serialize(newCfg);
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"), newCfgText);
         }
 
-        public Version GamePatchVersion
+        var cfgText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"));
+        var cfg = JsonSerializer.Deserialize<AppSettings>(cfgText);
+
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json")))
         {
-            get => _gamePatchVersion;
-            set => this.RaiseAndSetIfChanged(ref _gamePatchVersion, value);
+            var newCfg = new PopOutSettings();
+            var newCfgText = JsonSerializer.Serialize(newCfg);
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"), newCfgText);
         }
 
-        public string InitStatusText
-        {
-            get => _initStatusText;
-            set => this.RaiseAndSetIfChanged(ref _initStatusText, value);
-        }
+        var popOutCfgString = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"));
+        var popOutCfg = JsonSerializer.Deserialize<PopOutSettings>(popOutCfgString);
+        Globals.GlobalEntites.Add("Settings", cfg!);
+        Globals.GlobalEntites.Add("PopOutSettings", popOutCfg!);
+    }
 
-        public MainWindowViewModel()
-        {
-            _ = Task.Run(checkPatchAsync);
-        }
+    public async Task LoadInstallerVMAsync()
+    {
+        var dir = await ToolUtils.GetGameDirectoryAsync();
+        Dispatcher.UIThread.Post(() => InstallerViewModel.GameLocation = dir);
+    }
 
-        public void OpenInstallerWindow(Window parent)
+    public async Task LoadMoreFoldersVMAsync()
+    {
+        var gameDir = await ToolUtils.GetGameDirectoryAsync();
+        if (string.IsNullOrWhiteSpace(gameDir))
+            return;
+        if (!File.Exists(Path.Combine(gameDir, "MoreFolders.json")))
+            return;
+
+        Dispatcher.UIThread.Post(() => MoreFoldersViewModel.MoreFolders.Clear());
+        var lines = await File.ReadAllTextAsync(Path.Combine(gameDir, "MoreFolders.json"));
+        var obj = JsonSerializer.Deserialize<List<MoreFolderItem>>(lines);
+        if (obj == null)
+            return;
+        foreach (var item in obj)
         {
-            var installer = new InstallerWindow()
+            Dispatcher.UIThread.Post(() =>
             {
-                DataContext = new InstallerViewModel(),
-                PreviousWindow = parent
-            };
-            parent.Hide();
-            installer.Show();
+                item.Parent = MoreFoldersViewModel.MoreFolders;
+                item.SomethingChangedEvent += MoreFoldersViewModel.HighlightSaveButton;
+                MoreFoldersViewModel.MoreFolders.Add(item);
+            });
         }
-        
-        public void OpenMoreFoldersWindow(Window parent)
+
+        Dispatcher.UIThread.Post(() => MoreFoldersViewModel.IsInitialized = true);
+    }
+
+    public async Task LoadSettingsVMAsync()
+    {
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        while (cfg == null)
         {
-            var foldersWindow = new MoreFoldersWindow()
-            {
-                DataContext = new MoreFoldersViewModel
-                {
-                    GamePath = _gamePath
-                },
-                PreviousWindow = parent
-            };
-            parent.Hide();
-            foldersWindow.Show();
+            await Task.Delay(100);
+            cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         }
 
-        public void OpenPlaylistEditorWindow(Window parent)
+        Dispatcher.UIThread.Post(() =>
         {
-            var foldersWindow = new PlaylistEditorWindow()
-            {
-                DataContext = new PlaylistEditorViewModel()
-                {
-                    Parent = parent
-                },
-                PreviousWindow = parent
-            };
-            parent.Hide();
-            foldersWindow.Show();
-        }
+            SettingsViewModel.TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
+            SettingsViewModel.TwitchMaxQueueItemsUntilDuplicationsAllowed =
+                cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
+            SettingsViewModel.TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
+            SettingsViewModel.TwitchMaxQueueSize = cfg.TwitchMaxQueueSize;
+            SettingsViewModel.TwitchRequestCoolDown = cfg.TwitchRequestCoolDown;
+            SettingsViewModel.TwitchMaxSongLengthSeconds = cfg.TwitchMaxSongLengthSeconds;
+            SettingsViewModel.TwitchQueueMaxLengthEnabled = cfg.TwitchQueueMaxLengthEnabled;
+            SettingsViewModel.TwitchQueueMaxLength = cfg.TwitchQueueMaxLength;
+            SettingsViewModel.TwitchQueueCutOffTimeEnabled = cfg.TwitchQueueCutOffTimeEnabled;
+            SettingsViewModel.TwitchQueueCutOffTimeDate = cfg.TwitchQueueCutOffTime.Date;
+            SettingsViewModel.TwitchQueueCutOffTimeTime = cfg.TwitchQueueCutOffTime.TimeOfDay;
+            SettingsViewModel.TwitchEnableLocalRequests = cfg.TwitchEnableLocalRequests;
+            SettingsViewModel.TwitchLocalRequestPath = cfg.TwitchLocalRequestPath;
+        });
+    }
 
-        public void OpenTwitchBotWindow(Window parent)
+    public async Task LoadTwitchSettingsVMAsync()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"), "#EXTM3U");
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json")))
+            return;
+        var data = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"));
+        var settings = JsonSerializer.Deserialize<TwitchSettings>(data);
+        if (settings != null)
         {
-            if (twitchBotViewModel == null)
-                twitchBotViewModel = new();
-            var foldersWindow = new TwitchBotWindow()
-            {
-                PreviousWindow = parent,
-                DataContext = twitchBotViewModel
-            };
-            twitchBotViewModel.Parent = foldersWindow;
-            parent.Hide();
-            foldersWindow.Show();
+            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelResult = settings.ChatChannel;
+            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameResult = settings.BotUsername;
+            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenResult = settings.TwitchToken;
+            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationResult = settings.AS2Location;
+            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelDone = !string.IsNullOrWhiteSpace(settings.ChatChannel);
+            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameDone = !string.IsNullOrWhiteSpace(settings.BotUsername);
+            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenDone = !string.IsNullOrWhiteSpace(settings.TwitchToken);
+            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationDone = !string.IsNullOrWhiteSpace(settings.AS2Location);
+            Globals.GlobalEntites.Add("TwitchSettings", settings);
         }
 
-        private async Task<string> findGameDirectoryAsync()
+        if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
+            await Dispatcher.UIThread.InvokeAsync(TwitchBotViewModel.ReloadRequestsPlaylist);
+
+        if (File.Exists(Path.Combine(settings!.AS2Location, "MoreFolders.json")))
         {
-            string directory = "";
-            if (Directory.Exists("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Audiosurf 2"))
-            {
-                directory = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Audiosurf 2";
-            }
-            else
-            {
-                try
-                {
-                    //GameID: 235800
-                    object steamPath = Registry.GetValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Valve\\Steam", "InstallPath", null) ?? throw new KeyNotFoundException("Steam installation not found");
-                    var vdfText = await File.ReadAllLinesAsync(Path.Combine(steamPath.ToString() ?? throw new InvalidOperationException("Invalid Steam install path"), "config\\libraryfolders.vdf"));
-                    var gameLineText = vdfText.FirstOrDefault(x => x.Contains("\"235800\"")) ?? throw new DirectoryNotFoundException("Game isn't listed as installed in Steam");
-                    var lineIndex = Array.IndexOf(vdfText, gameLineText);
-                    for (int i = lineIndex - 1; i >= 0; i--)
-                    {
-                        if (vdfText[i].Contains("\"path\""))
-                        {
-                            vdfText[i] = vdfText[i].Replace("\"path\"", "");
-                            var libraryPath = vdfText[i][(vdfText[i].IndexOf('\"') + 1)..vdfText[i].LastIndexOf('\"')];
-                            libraryPath = libraryPath.Replace("\\\\", "\\");
-                            directory = Path.Combine(libraryPath, "steamapps\\common\\Audiosurf 2");
-                            break;
-                        }
-                    }
+            var lines = await File.ReadAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"));
+            var obj = JsonSerializer.Deserialize<List<RawMoreFolderItem>>(lines);
+            if (obj == null || obj.Any(x => x.Path == Path.Combine(appdata, "AS2Tools")))
+                return;
 
-                    if (string.IsNullOrWhiteSpace(directory))
-                        throw new DirectoryNotFoundException("Unable to find Audiosurf 2 directory");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
-                    //MessageBox here with error or something
-                }
-            }
-
-            return directory;
+            obj.Add(new RawMoreFolderItem
+            {
+                Name = "Twitch Bot Requests",
+                Path = Path.Combine(appdata, "AS2Tools"),
+                Position = 9
+            });
+            lines = JsonSerializer.Serialize(obj);
+            await File.WriteAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"), lines);
         }
+    }
 
-        private async Task checkPatchAsync()
-        {
-            //await Task.Delay(2500);
-            //await changeTextAsync("Checking Patch Install...");
-            //await Task.Delay(1500);
-            _gamePath = await findGameDirectoryAsync();
-            if (Directory.Exists(Path.Combine(_gamePath, "Audiosurf2_Data\\patchupdater")))
-            {
-                GamePatched = true;
-                //VersionCheck here
-                await changeTextAsync("Checking Patch Version...");
-                //await Task.Delay(1500);
-                var versionString = File.ReadAllTextAsync(Path.Combine(_gamePath, "Audiosurf2_Data\\patchupdater\\installedversion.txt"));
-                GamePatchVersion = new Version("0.0.8");
-            }
-            await changeTextAsync("Ready :)");
-            //await Task.Delay(1500);
-            await changeTextAsync("");
-            IsInitializing = false;
-        }
+    public void OpenCloseSidebar()
+        => OpenSidebar = !OpenSidebar;
 
-        private async Task changeTextAsync(string newText)
-        {
-            var oldLength = InitStatusText.Length;
-            for (int i = oldLength - 1; i >= 0; i--)
-            {
-                InitStatusText = InitStatusText[0..^1];
-                await Task.Delay(10);
-            }
+    public void OpenInstaller()
+    {
+        (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
+            (SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent, Brushes.Transparent, Brushes.Transparent,
+                Brushes.Transparent);
+        (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
+                TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
+            (true, false, false, false, false);
+    }
 
-            for (int i = 0; i < newText.Length; i++)
-            {
-                InitStatusText += newText[i];
-                await Task.Delay(10);
-            }
-        }
+    public void OpenMoreFolders()
+    {
+        (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
+            (Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent, Brushes.Transparent,
+                Brushes.Transparent);
+        (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
+                TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
+            (false, true, false, false, false);
+    }
+
+    public void OpenPlaylistEditor()
+    {
+        (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
+            (Brushes.Transparent, Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"), Brushes.Transparent,
+                Brushes.Transparent);
+        (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
+                TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
+            (false, false, true, false, false);
+    }
+
+    public void OpenTwitchBot()
+    {
+        (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
+            (Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, SolidColorBrush.Parse("#33ffffff"),
+                Brushes.Transparent);
+        (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
+                TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
+            (false, false, false, true, false);
+    }
+
+    public void OpenSettings()
+    {
+        (InstallerHighlight, MoreFoldersHighlight, PlaylistEditorHighlight, TwitchBotHighlight, SettingsHighlight) =
+            (Brushes.Transparent, Brushes.Transparent, Brushes.Transparent, Brushes.Transparent,
+                SolidColorBrush.Parse("#33ffffff"));
+        (InstallerViewModel.IsOpen, MoreFoldersViewModel.IsOpen, PlaylistEditorViewModel.IsOpen,
+                TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
+            (false, false, false, false, true);
     }
 }

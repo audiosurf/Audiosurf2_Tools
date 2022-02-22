@@ -1,0 +1,59 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Audiosurf2_Tools.ViewModels"
+             xmlns:miniControls="clr-namespace:Audiosurf2_Tools.MiniControls"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="450"
+             x:Class="Audiosurf2_Tools.Controls.TwitchBotSetupControl">
+    
+    <UserControl.DataContext>
+        <viewModels:TwitchBotSetupViewModel/>
+    </UserControl.DataContext>
+    
+    <Grid RowDefinitions="*,*,*,*"
+          VerticalAlignment="Center"
+          HorizontalAlignment="Stretch"
+          MaxWidth="500">
+        
+        <miniControls:BotSetupStep Grid.Row="0"
+                                   Status="Streamers Channel Name"
+                                   HelpText="Enter the username of the streamer (probably you) who's chat you'd like to use this for. The username is always lowercase!"
+                                   ResultValue="{Binding ChatChannelResult}"
+                                   InputValue="{Binding ChatChannelInput, Mode=TwoWay}"
+                                   IsDone="{Binding ChatChannelDone}"
+                                   IsEditing="{Binding ChatChannelEditing}"
+                                   ConfirmCommand="{Binding EnterChannelName}"/>
+        
+        <miniControls:BotSetupStep Grid.Row="1"
+                                   Status="Bot Username"
+                                   HelpText="Enter the username of the bot account. Should always be lowercase"
+                                   ResultValue="{Binding BotUsernameResult}"
+                                   InputValue="{Binding BotUsernameInput, Mode=TwoWay}"
+                                   IsDone="{Binding BotUsernameDone}"
+                                   IsEditing="{Binding BotUsernameEditing}"
+                                   ConfirmCommand="{Binding EnterBotUsername}"/>
+        
+        <miniControls:BotSetupStepExtra Grid.Row="2"
+                                        Status="Twitch Chat Token"
+                                        HelpText="Enter the OAuth token for the Bot account(!). You can get it automatically by using the '...' button."
+                                        ResultValue="{Binding TwitchAuthUtil.CurrentTime, StringFormat=\{0:mm\\:ss\}}"
+                                        InputValue="{Binding TwitchTokenInput, Mode=TwoWay}"
+                                        IsDone="{Binding TwitchTokenDone}"
+                                        IsEditing="{Binding TwitchTokenEditing}"
+                                        ConfirmCommand="{Binding EnterTwitchToken}"
+                                        ExtraCommand="{Binding AutoTwitchToken}"/>
+        
+        <miniControls:BotSetupStepExtra Grid.Row="3"
+                                        Status="Audiosurf 2 Location"
+                                        HelpText="Use the '...' to Browse for the folder if the found location isn't correct"
+                                        ResultValue="{Binding AS2LocationResult}"
+                                        InputValue="{Binding AS2LocationInput, Mode=TwoWay}"
+                                        IsDone="{Binding AS2LocationDone}"
+                                        IsEditing="{Binding AS2LocationEditing}"
+                                        ConfirmCommand="{Binding EnterAS2Location}"
+                                        ExtraCommand="{Binding BrowseAS2Location}"/>
+        
+    </Grid>
+    
+</UserControl>

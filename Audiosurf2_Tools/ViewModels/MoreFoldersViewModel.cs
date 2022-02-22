@@ -1,75 +1,83 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Audiosurf2_Tools.Models;
-using ReactiveUI;
+using Avalonia.Media;
+using ReactiveUI.Fody.Helpers;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Audiosurf2_Tools.ViewModels;
 
 public class MoreFoldersViewModel : ViewModelBase
 {
-    private ObservableCollection<MoreFolderItem> _moreFolders;
-    private bool _isInitializing = true;
+    //BTN Backcolor #33ffffff
+    [Reactive] public bool IsOpen { get; set; }
+    [Reactive] public ObservableCollection<MoreFolderItem> MoreFolders { get; set; }
 
-    public string GamePath { get; init; }
+    [Reactive] public ISolidColorBrush SaveBtnBackground { get; set; } = SolidColorBrush.Parse("#33ffffff");
 
-    public ObservableCollection<MoreFolderItem> MoreFolders
-    {
-        get => _moreFolders;
-        set => this.RaiseAndSetIfChanged(ref _moreFolders, value);
-    }
-
-    public bool IsInitializing
-    {
-        get => _isInitializing;
-        set => this.RaiseAndSetIfChanged(ref _isInitializing, value);
-    }
+    public bool IsInitialized { get; set; } = false;
 
     public MoreFoldersViewModel()
     {
-        _moreFolders = new();
-        _ = Task.Run(LoadMoreFoldersAsync);
-    }
-
-    public async Task LoadMoreFoldersAsync()
-    {
-        IsInitializing = true;
-        await Task.Delay(1000);
-        _moreFolders.Clear();
-        var file = await File.ReadAllLinesAsync(Path.Combine(GamePath, "MoreFolders.txt"));
-        var names = file.Where(x => x.StartsWith("name")).ToArray();
-        var paths = file.Where(x => x.StartsWith("path")).ToArray();
-        for (int i = 0; i < names.Length; i++)
+        MoreFolders = new();
+        MoreFolders.CollectionChanged += (sender, args) =>
         {
-            await Task.Delay(200);
-            MoreFolders.Add(new MoreFolderItem(names[i].Replace("name=", ""), paths[i].Replace("path=", ""),
-                MoreFolders));
-        }
-
-        await Task.Delay(1000);
-        IsInitializing = false;
+            if (IsInitialized)
+                HighlightSaveButton();
+        }; 
     }
 
-    public void AddFolder()
+    public void HighlightSaveButton()
     {
-        MoreFolders.Add(new ("", "", MoreFolders, true));
+        SaveBtnBackground = SolidColorBrush.Parse("#226622");
+    }
+
+    public void AddMoreFolderItem()
+    {
+        var itm = new MoreFolderItem(MoreFolders, "", "", -1)
+        {
+            IsEditing = true
+        };
+        itm.SomethingChangedEvent += HighlightSaveButton;
+        MoreFolders.Add(itm);
+    }
+
+    public async Task LoadMoreFolderItemsAsync()
+    {
+        var gameDir = await ToolUtils.GetGameDirectoryAsync();
+        if (string.IsNullOrWhiteSpace(gameDir))
+            return;
+        if (!File.Exists(Path.Combine(gameDir, "MoreFolders.json")))
+            return;
+
+        MoreFolders.Clear();
+        var lines = await File.ReadAllTextAsync(Path.Combine(gameDir, "MoreFolders.json"));
+        var obj = JsonSerializer.Deserialize<List<MoreFolderItem>>(lines);
+        if (obj == null)
+            return;
+        foreach (var item in obj)
+        {
+            item.Parent = MoreFolders;
+            item.SomethingChangedEvent += HighlightSaveButton;
+            MoreFolders.Add(item);
+        }
+        SaveBtnBackground = SolidColorBrush.Parse("#33ffffff");
     }
 
     public async Task SaveMoreFoldersAsync()
     {
-        var titles = MoreFolders.Select(x => x.Name).ToArray();
-        var paths = MoreFolders.Select(x => x.Path).ToArray();
-        File.Delete(Path.Combine(GamePath, "MoreFolders.txt"));
-        using (var fw = File.CreateText(Path.Combine(GamePath, "MoreFolders.txt")))
-        {
-            for (int i = 0; i < titles.Length; i++)
-            {
-                await fw.WriteLineAsync($"name={titles[i]}");
-                await fw.WriteLineAsync($"path={paths[i]}");
-            }
-        }
+        var gameDir = await ToolUtils.GetGameDirectoryAsync();
+        if (string.IsNullOrWhiteSpace(gameDir))
+            return;
+        if (!File.Exists(Path.Combine(gameDir, "MoreFolders.json")))
+            return;
 
-        await LoadMoreFoldersAsync();
+        var rawMore = MoreFolders.Select(x => x.ConvertToRaw(x));
+        var text = JsonSerializer.Serialize(rawMore);
+        await File.WriteAllTextAsync(Path.Combine(gameDir, "MoreFolders.json"), text);
+        SaveBtnBackground = SolidColorBrush.Parse("#33ffffff");
     }
 }

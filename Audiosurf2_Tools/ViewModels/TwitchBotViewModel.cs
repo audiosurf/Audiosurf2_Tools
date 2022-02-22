@@ -1,287 +1,473 @@
-﻿using Avalonia.Controls;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
+using System.Collections.Specialized;
+using System.Data.SQLite;
+using System.Data.SqlTypes;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Reactive;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Xml;
+using ATL;
+using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
-using MessageBox.Avalonia;
-using MessageBox.Avalonia.Enums;
-using Microsoft.Win32;
-using Newtonsoft.Json;
+using Avalonia.Threading;
+using Dapper;
+using PlaylistsNET.Content;
+using PlaylistsNET.Models;
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Events;
 using TwitchLib.Communication.Models;
-using YoutubeExplode;
 
-namespace Audiosurf2_Tools.ViewModels
+namespace Audiosurf2_Tools.ViewModels;
+
+public class TwitchBotViewModel : ViewModelBase
 {
-    public class TwitchBotViewModel : ViewModelBase
+    private TwitchClient _twitchClient { get; set; }
+    [Reactive] private bool IsConnected { get; set; }
+    [Reactive] public bool RequestsOpen { get; set; } = true;
+    [Reactive] public bool IsOpen { get; set; }
+    public int RequestSelectionDummy
     {
-        private static HttpClient _httpClient = new();
+        get => -1;
+        set => this.RaisePropertyChanged(nameof(RequestSelectionDummy));
+    }
 
-        private TwitchConfig _twConfig = new();
+    [Reactive] public ObservableCollection<string> ChatMessages { get; set; }
+    [Reactive] public ObservableCollection<TwitchRequestItem> Requests { get; set; }
+    [Reactive] public TimeSpan RequestsLength { get; set; }
+    [Reactive] public ObservableCollection<TwitchRequestItem> PastRequests { get; set; }
 
-        private string _statusText = "";
-        private bool _isWaiting = false;
-        private bool _isConnected = false;
-        private ObservableCollection<string> _twitchResponses;
-        private TwitchClient _twitchClient;
-        private readonly YoutubeClient _youtubeClient;
-        private string _twitchUsername = "";
-        private string _twitchAccessToken = "";
-        private string _as2InfoKey = "";
-        private string _twitchChatChannel = "";
-        private readonly ulong _steamId64 = 0;
-        private ObservableCollection<RequestItem> _songRequests;
-        public Window Parent { get; internal set; }
+    private ConcurrentDictionary<string, DateTimeOffset> requestTimes { get; set; }
+    [Reactive] public TwitchBotSetupViewModel TwitchBotSetupViewModel { get; set; }
 
-        public ObservableCollection<string> TwitchResponses
+    public TwitchBotViewModel()
+    {
+        RequestsLength = TimeSpan.Zero;
+        ChatMessages = new();
+        Requests = new();
+        Requests.CollectionChanged += RequestsOnCollectionChanged;
+        PastRequests = new ObservableCollection<TwitchRequestItem>();
+        PastRequests.CollectionChanged += PastRequestsOnCollectionChanged;
+        requestTimes = new();
+        TwitchBotSetupViewModel = new();
+    }
+
+    private void PastRequestsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Remove || e.Action == NotifyCollectionChangedAction.Add)
         {
-            get => _twitchResponses;
-            set => this.RaiseAndSetIfChanged(ref _twitchResponses, value);
+            _ = Task.Run(RebuildPastRequestsM3U);
         }
+    }
 
-        public ObservableCollection<RequestItem> SongRequests
+    private void RequestsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action is not (NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Add)) 
+            return;
+        
+        var tmSpn = TimeSpan.Zero;
+        var times = Requests.Select(x => x.Duration);
+        tmSpn = times.Aggregate(tmSpn, (current, duration) => current + duration);
+        RequestsLength = tmSpn;
+        _ = Task.Run(RebuildRequestsM3U);
+    }
+
+    public async Task ConnectAsync()
+    {
+        _twitchClient?.Disconnect();
+
+        var clientOptions = new ClientOptions
         {
-            get => _songRequests;
-            set => this.RaiseAndSetIfChanged(ref _songRequests, value);
+            MessagesAllowedInPeriod = 750,
+            ThrottlingPeriod = TimeSpan.FromSeconds(30)
+        };
+        WebSocketClient customClient = new WebSocketClient(clientOptions);
+        _twitchClient = new TwitchClient(customClient);
+        try
+        {
+            _twitchClient.OnConnected += Client_OnConnected;
+            _twitchClient.OnMessageReceived += Client_OnMessageReceived;
+            _twitchClient.OnMessageReceived += Client_OnCommandReceived;
+            _twitchClient.OnDisconnected += Client_OnDisconnected;
+            _twitchClient.OnConnectionError += Client_OnConnectionError;
+            _twitchClient.Initialize(
+                new ConnectionCredentials(TwitchBotSetupViewModel.BotUsernameResult,
+                    TwitchBotSetupViewModel.TwitchTokenResult),
+                TwitchBotSetupViewModel.ChatChannelResult);
+            IsConnected = await Task.Run(_twitchClient.Connect);
         }
-
-        public string StatusText
+        catch (Exception e)
         {
-            get => _statusText;
-            set => this.RaiseAndSetIfChanged(ref _statusText, value);
+            Console.WriteLine(e);
+            throw;
         }
-
-        public bool IsWaiting
+        finally
         {
-            get => _isWaiting;
-            set => this.RaiseAndSetIfChanged(ref _isWaiting, value);
-        }
-
-        public string TwitchUsername
-        {
-            get => _twitchUsername;
-            set => this.RaiseAndSetIfChanged(ref _twitchUsername, value);
-        }
-
-        public string TwitchAccessToken
-        {
-            get => _twitchAccessToken;
-            set => this.RaiseAndSetIfChanged(ref _twitchAccessToken, value);
-        }
-
-        public string As2InfoKey
-        {
-            get => _as2InfoKey;
-            set => this.RaiseAndSetIfChanged(ref _as2InfoKey, value);
-        }
-
-        public string TwitchChatChannel
-        {
-            get => _twitchChatChannel;
-            set => this.RaiseAndSetIfChanged(ref _twitchChatChannel, value);
-        }
-
-        public ReactiveCommand<Unit, Unit> ConnectBotCommand { get; set; }
-
-
-        public TwitchBotViewModel()
-        {
-            _twitchResponses = new();
-            _songRequests = new();
-            _statusText = "";
-            _isWaiting = false;
-            _youtubeClient = new();
-
-            var canConnect = this.WhenAny(
-                x => x.TwitchUsername,
-                x => x.TwitchChatChannel,
-                x => x.TwitchAccessToken,
-                x => x.As2InfoKey,
-                (username, channel, token, as2InfoKey)
-                    => (!string.IsNullOrWhiteSpace(username.Value)
-                        && !string.IsNullOrWhiteSpace(channel.Value)
-                        && !string.IsNullOrWhiteSpace(token.Value)
-                        && !string.IsNullOrWhiteSpace(as2InfoKey.Value)));
-
-            ConnectBotCommand = ReactiveCommand.CreateFromTask(TestAsync, canConnect);
-
-            var clientOptions = new ClientOptions
+            if (IsConnected)
             {
-                MessagesAllowedInPeriod = 750,
-                ThrottlingPeriod = TimeSpan.FromSeconds(30)
-            };
-            WebSocketClient customClient = new WebSocketClient(clientOptions);
-            _twitchClient = new TwitchClient(customClient);
+                _ = Task.Run(RequestCheckLoop);
+            }
+        }
+    }
 
+    public void Disconnect()
+    {
+        _twitchClient?.Disconnect();
+        _twitchClient = default!;
+    }
 
-            //Get SteamID64 via registry only works for "Public" universe
-            var reg = Registry.GetValue("HKEY_CURRENT_USER\\Software\\Valve\\Steam\\ActiveProcess", "ActiveUser", 0);
-            if (reg == null || (int)reg == 0 || !ulong.TryParse(reg.ToString(), out var id3))
+    public void StartOver()
+    {
+        TwitchBotSetupViewModel = new();
+    }
+
+    private void Client_OnConnectionError(object? sender, OnConnectionErrorArgs e)
+    {
+        ChatMessages.Insert(0, $"ERROR: {e.Error.Message}");
+        if (ChatMessages.Count > 100)
+            ChatMessages.RemoveAt(ChatMessages.Count - 1);
+        IsConnected = false;
+    }
+
+    private void Client_OnDisconnected(object? sender, OnDisconnectedEventArgs e)
+    {
+        ChatMessages.Insert(0, $"DISCONNECTED");
+        if (ChatMessages.Count > 100)
+            ChatMessages.RemoveAt(ChatMessages.Count - 1);
+        IsConnected = false;
+    }
+
+    private void Client_OnCommandReceived(object? sender, OnMessageReceivedArgs e)
+    {
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        var prefix = cfg!.TwitchCommandPrefix;
+        if (!e.ChatMessage.Message.ToLower().StartsWith(prefix + "sr ")) 
+            return;
+        
+        if(!InitialCanRequestChecks(e.ChatMessage.Username))
+            return;
+        
+        var length = (prefix + "sr ").Length;
+        var reg =
+            @"(?i)(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})(?-i)";
+
+        var match = Regex.Match(e.ChatMessage.Message.Substring(length), reg);
+        if (match.Success && match.Groups[1].Value.Length == 11)
+        {
+            _ = Task.Run(() => HandleSongRequestAsync(match.Groups[1].Value, e.ChatMessage.Username));
+        }
+
+        else if (cfg.TwitchEnableLocalRequests)
+        {
+            if (!File.Exists(Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length))))
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{e.ChatMessage.Username} File not found, did you type the name wrong? (you also need to type the extension like .mp3 or .flac)");
                 return;
-            _steamId64 = (1UL << 56) | (1UL << 52) | (1UL << 32) | id3;
-
-            _ = Task.Run(_loadCreateConfig);
+            }
+            _ = Task.Run(() =>
+                HandleSongRequestAsync(
+                    Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length)),
+                    e.ChatMessage.Username, false));
         }
+    }
 
-        private void Client_OnConnectionError(object? sender, OnConnectionErrorArgs e)
+    public bool InitialCanRequestChecks(string username)
+    {
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        
+        if (!RequestsOpen)
         {
-            TwitchResponses.Insert(0, $"ERROR: {e.Error.Message}");
-            if (TwitchResponses.Count > 100)
-                TwitchResponses.RemoveAt(TwitchResponses.Count - 1);
-            _isConnected = false;
-        }
-
-        private void Client_OnDisconnected(object? sender, OnDisconnectedEventArgs e)
-        {
-            TwitchResponses.Insert(0, $"DISCONNECTED");
-            if (TwitchResponses.Count > 100)
-                TwitchResponses.RemoveAt(TwitchResponses.Count - 1);
-            _isConnected = false;
-        }
-
-        private async Task _loadCreateConfig()
-        {
-            var appdataLocation = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            if (!Directory.Exists(Path.Combine(appdataLocation, "AS2Tools")))
-                Directory.CreateDirectory(Path.Combine(appdataLocation, "AS2Tools"));
-            if (File.Exists(Path.Combine(appdataLocation, "AS2Tools\\TwitchConfig.json")))
+            Dispatcher.UIThread.Post(() =>
             {
-                var json = await File.ReadAllTextAsync(Path.Combine(appdataLocation, "AS2Tools\\TwitchConfig.json"));
-                if (!string.IsNullOrWhiteSpace(json))
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Requests are currently disabled!"); 
+            });
+            return false;
+        }
+
+        var durationUpcoming = Requests.Sum(x => x.Duration.Ticks);
+        var durationPast = PastRequests.Sum(x => x.Duration.Ticks);
+        var fullDuration = new TimeSpan(durationUpcoming + durationPast);
+        if (PastRequests.Count != 0)
+            fullDuration += PastRequests[0].Duration;
+        if (cfg!.TwitchQueueMaxLengthEnabled && cfg.TwitchQueueMaxLength < fullDuration)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} The queue has reached the maximum length, no more requests fit in!");
+            });
+            return false;
+        }
+        
+        if (requestTimes.ContainsKey(username))
+        {
+            if ((DateTimeOffset.Now - requestTimes[username]).TotalSeconds < cfg.TwitchRequestCoolDown)
+            {
+                Dispatcher.UIThread.Post(() =>
                 {
-                    _twConfig = JsonConvert.DeserializeObject<TwitchConfig>(json) ?? new TwitchConfig();
-                    TwitchChatChannel = _twConfig.ChatChannel;
-                    TwitchAccessToken = _twConfig.TwitchToken;
-                    TwitchUsername = _twConfig.BotUsername;
-                    As2InfoKey = _twConfig.AS2InfoKey;
-                }
-            }
-            else
-            {
-                var f = File.Create(Path.Combine(appdataLocation, "AS2Tools\\TwitchConfig.json"));
-                await f.DisposeAsync();
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} You're on cooldown! Wait {(cfg.TwitchRequestCoolDown - (DateTimeOffset.Now - requestTimes[username]).TotalSeconds).ToString("##")} more seconds to request again!");
+                });
+                return false;
             }
         }
 
-        private void Client_OnCommandReceived(object? sender, OnChatCommandReceivedArgs e)
+        if (cfg.TwitchQueueCutOffTimeEnabled)
         {
-            if (e.Command.CommandText == "sr")
+            if ((DateTimeOffset.Now + RequestsLength) > cfg.TwitchQueueCutOffTime)
             {
-                var reg =
-                    @"(?i)(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})(?-i)";
-                var match = Regex.Match(e.Command.ArgumentsAsString, reg);
-                if (match.Success && match.Groups[1].Value.Length == 11)
+                Dispatcher.UIThread.Post(() =>
                 {
-                    _ = Task.Run(() => sendQueueRequestAsync(match.Groups[1].Value, e.Command.ChatMessage.Username));
-                }
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Queue has reached cut-off time, no more requests fit in!");
+                });
+                return false;
             }
         }
 
-        private async Task sendQueueRequestAsync(string videoId, string username)
+        if (Requests.Count >= cfg.TwitchMaxQueueSize)
         {
-            using (var msg = new HttpRequestMessage(HttpMethod.Post, "https://audiosurf2.info/twitch/queue_add"))
+            Dispatcher.UIThread.Post(() =>
             {
-                var values = new Dictionary<string, string> {
-                    { "username", username },
-                    { "youtubeId", videoId },
-                    { "apiKey", As2InfoKey }
-                };
-                var content = new FormUrlEncodedContent(values);
-                msg.Content = content;
-                var resp = await _httpClient.SendAsync(msg);
-                var responseString = await resp.Content.ReadAsStringAsync();
-
-                if (responseString.Length < 200 && resp.IsSuccessStatusCode)
-                {
-                    _twitchClient.SendMessage(TwitchChatChannel, "@" + username + " " + responseString);
-                    if (responseString.Contains("Already in queue!"))
-                        return;
-                    await refreshRequests();
-                }
-                else
-                {
-                    Console.WriteLine("response error " + responseString);
-                }
-            }
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} Queue is full, please try again later!");
+            });
+            return false;
         }
 
-        private void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
-        {
-            TwitchResponses.Insert(0, $"{e.ChatMessage.DisplayName} ({e.ChatMessage.UserId}): {e.ChatMessage.Message}");
-            if (TwitchResponses.Count > 100) 
-                TwitchResponses.RemoveAt(TwitchResponses.Count - 1);
+        return true;
+    }
 
-        }
-
-        private void Client_OnConnected(object? sender, OnConnectedArgs e)
+    public async Task ReloadRequestsPlaylist()
+    {
+        Requests.Clear();
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var content = new M3uContent();
+        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"));
+        var playlist = content.GetFromString(plsText);
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        foreach (var vid in playlist.PlaylistEntries)
         {
-            TwitchResponses.Insert(0, "Connected to chat!");
-        }
-
-        private async Task refreshLoop()
-        {
-            while (_isConnected)
+            if (vid.Path.Contains("https://"))
             {
-                await refreshRequests();
-                await Task.Delay(10000);
+                var video = await Consts.YoutubeClient.Videos.GetAsync(vid.Path);
+                Requests.Add(new TwitchRequestItem(Requests, 
+                    PastRequests,
+                    video.Title,
+                    video.Author.Title,
+                    video.Url,
+                    vid.CustomProperties.ContainsKey("EXTREQ") ? vid.CustomProperties["EXTREQ"] : "n/a",
+                    video.Duration ?? TimeSpan.Zero));
+            }
+            else if (cfg!.TwitchEnableLocalRequests && File.Exists(vid.Path))
+            {
+                var video = new Track(vid.Path);
+                Requests.Add(new TwitchRequestItem(Requests, 
+                    PastRequests,
+                    video.Title,
+                    video.Artist,
+                    video.Path,
+                    vid.CustomProperties.ContainsKey("EXTREQ") ? vid.CustomProperties["EXTREQ"] : "n/a",
+                    TimeSpan.FromSeconds(video.Duration)));
             }
         }
+    }
 
-        private async Task refreshRequests()
+    public async Task RebuildRequestsM3U()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var content = new M3uContent();
+        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"));
+        var playlist = content.GetFromString(plsText);
+        playlist.PlaylistEntries.Clear();
+        foreach (var vid in Requests)
         {
-            var apiResp =
-                await _httpClient.GetFromJsonAsync<List<RequestApiResponse>>(
-                    "https://audiosurf2.info/api/queue/" + _steamId64);
-            if (apiResp == null)
+            playlist.PlaylistEntries.Add(new M3uPlaylistEntry()
+            {
+                Path = vid.Location,
+                CustomProperties = new() {{"EXTREQ", vid.Requester}}
+            });
+        }
+
+        plsText = content.ToText(playlist);
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"), plsText);
+    }
+
+    public async Task RebuildPastRequestsM3U()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var plsLocation = Path.Combine(appdata, "AS2Tools");
+        var titleDate = DateTime.Today.ToShortDateString().Replace('/', '.').Replace('\\', '.');
+        if (!File.Exists(Path.Combine(plsLocation, $"{titleDate}.m3u")))
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(plsLocation,
+                    $"{titleDate}.m3u"),
+                "#EXTM3U");
+        }
+
+        var content = new M3uContent();
+        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"));
+        var playlist = content.GetFromString(plsText);
+        playlist.PlaylistEntries.Clear();
+        foreach (var vid in PastRequests)
+        {
+            playlist.PlaylistEntries.Add(new M3uPlaylistEntry()
+            {
+                Path = vid.Location,
+                CustomProperties = new() {{"EXTREQ", vid.Requester}}
+            });
+        }
+
+        plsText = content.ToText(playlist);
+        await File.WriteAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"), plsText);
+    }
+
+    public async Task HandleSongRequestAsync(string id, string username, bool isYoutube = true)
+    {
+        //more checks here
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        var mostRecent = PastRequests.Take(cfg!.TwitchMaxRecentAgeBeforeDuplicateError);
+        if (mostRecent.Any(x => x.Location.Contains(id)))
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} This was recently played!");
+            });
+            return;
+        }
+        if (Requests.TakeLast(cfg!.TwitchMaxQueueItemsUntilDuplicationsAllowed).Any(x => x.Location.Contains(id)))
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} This is already in the queue!");
+            });
+            return;
+        }
+        if (isYoutube)
+        {
+            var song = await Consts.YoutubeClient.Videos.GetAsync(id);
+
+            if (song.Duration == null)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Livestreams are not allowed!");
+                });
                 return;
-            SongRequests.Clear();
-            foreach (var apiRequest in apiResp)
-            {
-                var itm = new RequestItem(apiRequest.Song, apiRequest.Channel, XmlConvert.ToTimeSpan(apiRequest.Duration));
-                SongRequests.Add(itm);
             }
+
+            if (song.Duration?.TotalSeconds > cfg.TwitchMaxSongLengthSeconds)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                });
+                return;
+            }
+
+            Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title, song.Author.Title, song.Url, username,
+                song.Duration ?? TimeSpan.Zero));
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} added {song.Title} to the queue!");
+            });
         }
 
-        private async Task TestAsync()
+        else
         {
-            if (_isConnected)
+            var song = new Track(id);
+
+            if (song.Duration > cfg.TwitchMaxSongLengthSeconds)
             {
-                _twitchClient.Disconnect();
-                _isConnected = false; 
-                var clientOptions = new ClientOptions
+                Dispatcher.UIThread.Post(() =>
                 {
-                    MessagesAllowedInPeriod = 750,
-                    ThrottlingPeriod = TimeSpan.FromSeconds(30)
-                };
-                WebSocketClient customClient = new WebSocketClient(clientOptions);
-                _twitchClient = new TwitchClient(customClient); ;
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                });
+                return;
             }
 
+            Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title ?? id.Split('\\').Last(), song.Artist, id, username,
+                TimeSpan.FromSeconds(song.Duration)));
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} added {song.Title ?? id.Split('\\').Last()} to the queue!");
+            });
+        }
+        
+        
+        if (requestTimes.ContainsKey(username))
+            requestTimes[username] = DateTimeOffset.Now;
+        else
+            requestTimes.TryAdd(username, DateTimeOffset.Now);
+    }
+
+    public async Task RequestCheckLoop()
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var plsLocation = Path.Combine(appdata, "AS2Tools");
+        while (IsConnected)
+        {
+            await Task.Delay(5000);
+            if (Requests.Count == 0)
+                continue;
+
+            await using var con = new SQLiteConnection("Data Source=" + Path.Combine(
+                TwitchBotSetupViewModel.AS2LocationResult, "Audiosurf2_Data\\cache\\db\\AudiosurfMusicLibrary.aml"));
             try
             {
-                _twitchClient.OnConnected += Client_OnConnected;
-                _twitchClient.OnMessageReceived += Client_OnMessageReceived;
-                _twitchClient.OnChatCommandReceived += Client_OnCommandReceived;
-                _twitchClient.OnDisconnected += Client_OnDisconnected;
-                _twitchClient.OnConnectionError += Client_OnConnectionError;
-                _twitchClient.Initialize(new ConnectionCredentials(TwitchUsername, TwitchAccessToken),
-                    TwitchChatChannel, '!');
-                _isConnected = _twitchClient.Connect();
+                var latestPlayedYoutubeEntry =
+                    await con.QueryFirstOrDefaultAsync<AS2DBYoutubeEntry>(
+                        "SELECT * FROM scsongs ORDER BY lastplaytime DESC LIMIT 1");
+                var latestPlayedLocalEntryByLastPlayTime =
+                    await con.QueryFirstOrDefaultAsync<AS2DBLocalEntry>(
+                        "SELECT * FROM songs ORDER BY lastplaytime DESC LIMIT 1");
+                //var latestPlayedLocalEntryBySongId =
+                //    await con.QueryFirstOrDefaultAsync<AS2DBLocalEntry>(
+                //        "SELECT * FROM songs ORDER BY songid DESC LIMIT 1");
+                if (latestPlayedYoutubeEntry == null)
+                    throw new SqlNullValueException("CheckLoop: Latest song is null");
+
+                var latestYoutubeId = latestPlayedYoutubeEntry.Name.Split(':')[1];
+                var toRemove = Requests.FirstOrDefault(x => x.Location.Contains(latestYoutubeId));
+                
+                //Check local songs DB by lastPlayTime
+                if (toRemove == null)
+                {
+                    toRemove = Requests.FirstOrDefault(x =>
+                        x.Location.ToLower()
+                            .Replace('/', '\\')
+                            .Replace("\\\\", "\\") == latestPlayedLocalEntryByLastPlayTime.Path);
+                }
+
+                //By last added ID, maybe not use this
+                //if (toRemove == null)
+                //    toRemove = Requests.FirstOrDefault(x =>
+                //        x.Location.ToLower()
+                //            .Replace('/', '\\')
+                //            .Replace("\\\\", "\\") == latestPlayedLocalEntryBySongId.Path);
+                if (toRemove != null)
+                {
+                    if (!File.Exists(Path.Combine(plsLocation, "TwitchRequests.m3u"))) //Just in case
+                        await File.WriteAllTextAsync(Path.Combine(plsLocation, "TwitchRequests.m3u"), "#EXTM3U");
+                    PastRequests.Insert(0, toRemove);
+                    Requests.Remove(toRemove);
+                }
             }
             catch (Exception e)
             {
@@ -289,82 +475,20 @@ namespace Audiosurf2_Tools.ViewModels
             }
             finally
             {
-                if (!_isConnected)
-                {
-                    var mb = MessageBoxManager
-                        .GetMessageBoxStandardWindow("Unable to start the bot", "Make sure the usernames match and the access token is for the bot user!\n(If you don't use a separate bot account,\nbot username and channel name should be the same)");
-                    await mb.ShowDialog(Parent);
-                }
-                else
-                {
-                    _ = Task.Run(refreshLoop);
-                }
+                con.Close();
             }
         }
+    }
 
-        private async Task DisconnectAsync()
-        {
-            if (_isConnected)
-            {
-                _twitchClient.Disconnect();
-                _isConnected = false;
-                var clientOptions = new ClientOptions
-                {
-                    MessagesAllowedInPeriod = 750,
-                    ThrottlingPeriod = TimeSpan.FromSeconds(30)
-                };
-                WebSocketClient customClient = new WebSocketClient(clientOptions);
-                _twitchClient = new TwitchClient(customClient);
-            }
-            TwitchResponses.Insert(0, $"Disconnected");
-            await Task.Delay(10);
-        }
+    private void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
+    {
+        ChatMessages.Insert(0, $"{e.ChatMessage.DisplayName} ({e.ChatMessage.UserId}): {e.ChatMessage.Message}");
+        if (ChatMessages.Count > 100)
+            ChatMessages.RemoveAt(ChatMessages.Count - 1);
+    }
 
-        private async Task saveConfigAsync()
-        {
-            var appdataLocation = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            if (!Directory.Exists(Path.Combine(appdataLocation, "AS2Tools")))
-                Directory.CreateDirectory(Path.Combine(appdataLocation, "AS2Tools"));
-            _twConfig.ChatChannel = TwitchChatChannel;
-            _twConfig.TwitchToken = TwitchAccessToken;
-            _twConfig.BotUsername = TwitchUsername;
-            _twConfig.AS2InfoKey = As2InfoKey;
-            var str = JsonConvert.SerializeObject(_twConfig);
-            await File.WriteAllTextAsync(Path.Combine(appdataLocation, "AS2Tools\\TwitchConfig.json"), str);
-        }
-
-        public async Task GetAccessTokenAsync()
-        {
-            var mb = MessageBoxManager
-                .GetMessageBoxStandardWindow("Important Info", "You'll be redirected to an OAuth token generator.\n" +
-                                                               "Make sure you're logged into Twitch with the account you want\n" +
-                                                               "to use for this (the one to respond to commands)", ButtonEnum.OkCancel);
-            var result = await mb.ShowDialog(Parent);
-            if (result != ButtonResult.Ok)
-                return;
-
-            Process.Start(new ProcessStartInfo("https://twitchapps.com/tmi/")
-            {
-                UseShellExecute = true,
-                Verb = "open"
-            });
-        }
-
-        public async Task GetAS2TokenAsync()
-        {
-            var mb = MessageBoxManager
-                .GetMessageBoxStandardWindow("Important Info", "You'll be redirected to the Audiosurf2.info site.\n" +
-                                                               "At the bottom you'll find the API key needed.\n" +
-                                                               "You need to be logged in.", ButtonEnum.OkCancel);
-            var result = await mb.ShowDialog(Parent);
-            if (result != ButtonResult.Ok)
-                return;
-
-            Process.Start(new ProcessStartInfo("https://audiosurf2.info/user/settings")
-            {
-                UseShellExecute = true,
-                Verb = "open"
-            });
-        }
+    private void Client_OnConnected(object? sender, OnConnectedArgs e)
+    {
+        ChatMessages.Insert(0, "Connected to chat!");
     }
 }

@@ -1,0 +1,154 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="using:Audiosurf2_Tools.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="650"
+             x:Class="Audiosurf2_Tools.Controls.SettingsControl">
+
+    <UserControl.DataContext>
+        <viewModels:SettingsViewModel />
+    </UserControl.DataContext>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+        <!--Probably cleaner to make a separate control for the buttons-->
+        <StackPanel Orientation="Vertical">
+            <GroupBox Margin="0,0,10,0"
+                      Header="Twitch Bot"
+                      BorderThickness="1"
+                      CornerRadius="2">
+                <StackPanel Orientation="Vertical"
+                            HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding TwitchCommandPrefix, StringFormat=Chat Prefix: (example: {0}sr)}"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding TwitchCommandPrefix}" />
+
+                    <TextBlock Text="Request Cooldown (seconds):"
+                               TextWrapping="Wrap" />
+                    <NumericUpDown Margin="0,5,0,15"
+                                   HorizontalAlignment="Left"
+                                   Width="130"
+                                   Value="{Binding  TwitchRequestCoolDown}" />
+
+                    <TextBlock Text="Max Song Length (seconds):"
+                               TextWrapping="Wrap" />
+                    <NumericUpDown Margin="0,5,0,15"
+                                   HorizontalAlignment="Left"
+                                   Width="130"
+                                   Value="{Binding TwitchMaxSongLengthSeconds}" />
+
+                    <TextBlock Text="Max Queue Size:"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding TwitchMaxQueueSize}" />
+                    
+                    <ToggleSwitch Content="Enable Max Queue Length"
+                                  IsChecked="{Binding TwitchQueueMaxLengthEnabled}" />
+                    <TimePicker Margin="0,5,0,15"
+                                IsEnabled="{Binding TwitchQueueMaxLengthEnabled}"
+                                HorizontalAlignment="Left" Header="(Hours | Minutes)"
+                                ClockIdentifier="24HourClock"
+                                SelectedTime="{Binding TwitchQueueMaxLength}"/>
+
+                    <ToggleSwitch Content="Enable Cut-Off Time"
+                                  IsChecked="{Binding TwitchQueueCutOffTimeEnabled}" />
+                    <DatePicker Margin="0,5,0,0"
+                                IsEnabled="{Binding TwitchQueueCutOffTimeEnabled}"
+                                SelectedDate="{Binding TwitchQueueCutOffTimeDate}" />
+                    <TimePicker Margin="0,0,0,15"
+                                IsEnabled="{Binding TwitchQueueCutOffTimeEnabled}"
+                                SelectedTime="{Binding TwitchQueueCutOffTimeTime}" />
+
+                    <ToggleSwitch Content="Enable Local Requests"
+                                  IsChecked="{Binding TwitchEnableLocalRequests}" />
+                    <Border Margin="0,5,0,15"
+                            IsEnabled="{Binding TwitchEnableLocalRequests}"
+                            BorderBrush="#666666"
+                            BorderThickness="1"
+                            CornerRadius="3">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBox Grid.Column="0"
+                                     VerticalAlignment="Center"
+                                     VerticalContentAlignment="Center"
+                                     BorderThickness="0"
+                                     Text="{Binding TwitchLocalRequestPath}" />
+                            <Button Grid.Column="1"
+                                    Content="Browse"
+                                    VerticalAlignment="Stretch"
+                                    VerticalContentAlignment="Center"
+                                    Command="{Binding SetLocalRequestsPathAsync}"
+                                    CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Text="Max Recent Request Count:"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding  TwitchMaxRecentAgeBeforeDuplicationError}" />
+
+                    <TextBlock Text="Max Upcoming Request Amount Before Duplicates Are Allowed:"
+                               TextWrapping="Wrap" />
+                    <TextBox Margin="0,5,0,0"
+                             HorizontalAlignment="Left"
+                             MaxLength="10"
+                             MaxWidth="100"
+                             Text="{Binding  TwitchMaxQueueItemsUntilDuplicationsAllowed}" />
+                </StackPanel>
+            </GroupBox>
+            <StackPanel Margin="0,5"
+                        Orientation="Horizontal"
+                        Spacing="5">
+                <Button Command="{Binding SaveSettingsAsync}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/save.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Save Settings" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="0,5"
+                        Command="{Binding ExportSettingsAsync}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/export.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Export Settings" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="0,5"
+                        Command="{Binding  ImportSettingsAsync}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/import.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Import Settings" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="0,5"
+                        Background="#662222"
+                        Command="{Binding DeleteAllAndExitAsync}"
+                        CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <Image Height="25" Source="avares://Audiosurf2_Tools/Assets/delete.png" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Delete Everything and Exit" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

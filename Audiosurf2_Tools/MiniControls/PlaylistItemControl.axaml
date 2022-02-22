@@ -1,0 +1,99 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:entities="clr-namespace:Audiosurf2_Tools.Entities"
+             mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="82.5"
+             x:Class="Audiosurf2_Tools.MiniControls.PlaylistItemControl">
+
+    <UserControl.DataContext>
+        <entities:BasePlaylistItem />
+    </UserControl.DataContext>
+
+    <Border BorderBrush="#666666"
+            BorderThickness="1"
+            CornerRadius="3">
+
+        <Grid ColumnDefinitions="80,*,Auto,Auto,Auto"
+              RowDefinitions="Auto,Auto">
+
+            <Border Grid.Column="0"
+                    Grid.Row="0"
+                    Grid.RowSpan="2"
+                    Margin="5"
+                    Background="#112222"
+                    Height="70"
+                    Width="70"
+                    CornerRadius="3">
+                <Image HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Source="{Binding CoverImage}"
+                       Height="70"
+                       Width="70" />
+            </Border>
+
+            <TextBlock Grid.Column="1"
+                       Grid.Row="0"
+                       Margin="5"
+                       VerticalAlignment="Center"
+                       Text="{Binding Title}"
+                       TextWrapping="Wrap" />
+            <TextBlock Grid.Column="1"
+                       Grid.Row="1"
+                       Margin="5"
+                       VerticalAlignment="Center"
+                       Text="{Binding Artist}"
+                       TextWrapping="Wrap" />
+
+            <TextBlock Grid.Column="2"
+                       Grid.Row="0"
+                       Grid.RowSpan="2"
+                       VerticalAlignment="Center"
+                       Margin="5"
+                       Text="{Binding Duration, StringFormat=\{0:mm\\:ss\}}" />
+
+            <Button Grid.Column="3"
+                    Grid.Row="0"
+                    Margin="1.5"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding MoveUp}">
+                <Image Height="20"
+                       Width="20"
+                       Source="avares://Audiosurf2_Tools/Assets/arrowup.png" />
+            </Button>
+            <Button Grid.Column="3"
+                    Grid.Row="1"
+                    Margin="1.5"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding MoveDown}">
+                <Image Height="20"
+                       Width="20"
+                       Source="avares://Audiosurf2_Tools/Assets/arrowdown.png" />
+            </Button>
+
+
+            <Button Grid.Column="4"
+                    Grid.Row="0"
+                    Grid.RowSpan="2"
+                    Margin="1.5"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Background="#662222"
+                    Command="{Binding RemoveThis}">
+                <Image Height="20"
+                       Width="20"
+                       Source="avares://Audiosurf2_Tools/Assets/delete.png" />
+            </Button>
+
+        </Grid>
+    </Border>
+
+</UserControl>

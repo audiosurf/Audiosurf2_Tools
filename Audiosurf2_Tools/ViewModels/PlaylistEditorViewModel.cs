@@ -1,278 +1,248 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reactive;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 using PlaylistsNET.Content;
 using PlaylistsNET.Models;
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 using YoutubeExplode.Common;
 using YoutubeExplode.Playlists;
 using YoutubeExplode.Videos;
 
-namespace Audiosurf2_Tools.ViewModels
+namespace Audiosurf2_Tools.ViewModels;
+
+public class PlaylistEditorViewModel : ViewModelBase
 {
-    public class PlaylistEditorViewModel : ViewModelBase
+    [Reactive] public bool IsOpen { get; set; } = false;
+
+    
+    [Reactive] public string PlaylistPath { get; set; } = "";
+    [Reactive] public string PlaylistName { get; set; } = "<New Playlist>";
+
+    [Reactive] public string InputLink { get; set; }
+    [Reactive] public ObservableCollection<BasePlaylistItem> PlaylistItems { get; set; }
+
+    
+    public int SelectedItemDummy { get => -1; set => this.RaisePropertyChanged(nameof(SelectedItemDummy)); }
+    public int LocalAmount => PlaylistItems.Count(x => x is LocalPlaylistItem);
+    public int YoutubeAmount => PlaylistItems.Count(x => x is YoutubePlaylistItem);
+    public TimeSpan TotalDuration => TimeSpan.FromMilliseconds(PlaylistItems.Sum(x => x.Duration.TotalMilliseconds));
+
+
+    [Reactive] public ReactiveCommand<string, Unit> AddYoutubeCommand { get; set; }
+
+    public PlaylistEditorViewModel()
     {
-        private ObservableCollection<IPlaylistItem> _playlistItems;
-        private string _currentPlaylistLocation = "";
-        private string _currentPlaylistName = "n/a";
-        private string _youTubeURL = "";
-        private bool _canAddYoutubeCommand;
-
-
-        public ObservableCollection<IPlaylistItem> PlaylistItems
+        PlaylistItems = new();
+        PlaylistItems.CollectionChanged += (sender, args) =>
         {
-            get => _playlistItems;
-            set => this.RaiseAndSetIfChanged(ref _playlistItems, value);
+            this.RaisePropertyChanged(nameof(LocalAmount));
+            this.RaisePropertyChanged(nameof(YoutubeAmount));
+            this.RaisePropertyChanged(nameof(TotalDuration));
+        };
+        var canAdd = this.WhenAny(x => x.InputLink, 
+            (thing) => Uri.TryCreate(thing.Value, UriKind.Absolute, out _));
+        AddYoutubeCommand = ReactiveCommand.CreateFromTask<string>(AddYoutubeAsync, canAdd);
+    }
+
+    public async Task AddYoutubeAsync(string url)
+    {
+        var vid = VideoId.TryParse(url);
+        var pls = PlaylistId.TryParse(url);
+        if (vid != null)
+        {
+            var itm = new YoutubePlaylistItem(vid, PlaylistItems);
+            _ = Task.Run(itm.LoadInfoAsync);
+            PlaylistItems.Add(itm);
         }
-
-        public int AmountLocal => PlaylistItems.Count(x => !x.Location.Contains("://"));
-        public int AmountYouTube => PlaylistItems.Count(x => x.Location.Contains("://"));
-
-        public string CurrentPlaylistLocation
+        else if (pls != null)
         {
-            get => _currentPlaylistLocation;
-            set => this.RaiseAndSetIfChanged(ref _currentPlaylistLocation, value);
-        }
-
-        public string CurrentPlaylistName
-        {
-            get => _currentPlaylistName;
-            set => this.RaiseAndSetIfChanged(ref _currentPlaylistName, value);
-        }
-
-        public string YouTubeURL
-        {
-            get => _youTubeURL;
-            set => this.RaiseAndSetIfChanged(ref _youTubeURL, value);
-        }
-
-        public ReactiveCommand<Unit, Unit> AddYouTubeCommand { get; }
-
-        public bool CanAddYoutubeCommand
-        {
-            get => _canAddYoutubeCommand;
-            set => this.RaiseAndSetIfChanged(ref _canAddYoutubeCommand, value);
-        }
-
-        public Window Parent { get; init; }
-        public PlaylistEditorViewModel()
-        {
-            _playlistItems = new();
-            CurrentPlaylistLocation = "";
-            CurrentPlaylistName = "n/a";
-
-            var canAddYouTube = this.WhenAnyValue(x => x.YouTubeURL)
-                .Subscribe(x => CanAddYoutubeCommand = ((VideoId.TryParse(x) != null || PlaylistId.TryParse(x) != null)));
-            AddYouTubeCommand = ReactiveCommand.CreateFromTask(AddYouTubeURLAsync, this.WhenAnyValue(x => x.CanAddYoutubeCommand));
-        }
-
-        public async Task OpenPlaylistAsync()
-        {
-            RemoveAll();
-            var f = new FileDialogFilter()
-            {
-                Extensions = new() {"m3u", "m3u8" },
-                Name = "Playlist"
-            };
-            var fileDialog = new OpenFileDialog()
-            {
-                AllowMultiple = false,
-                Title = "Select a playlist file!",
-                Directory = "C:\\",
-                Filters = new() { f }
-            };
-            var result = await fileDialog.ShowAsync(Parent);
-            if (result == null || result?.Length == 0)
-                return;
-            var content = File.Open(result![0], FileMode.Open);
-            var pl = new M3uContent().GetFromStream(content);
-            CurrentPlaylistLocation = result[0];
-            CurrentPlaylistName = result[0].Split("\\").Last();
-            foreach (var entry in pl.PlaylistEntries)
+            await foreach (var item in Consts.YoutubeClient.Playlists.GetVideosAsync(pls.GetValueOrDefault()))
             {
                 try
                 {
-                    if (VideoId.TryParse(entry.Path) == null)
-                    {
-                        var plItem = new LocalPlaylistItem(entry.Path.Replace("file:///", ""));
-                        await plItem.LoadInfoAsync();
-                        PlaylistItems.Add(plItem);
-                        this.RaisePropertyChanged("AmountLocal");
-                    }
-                    else
-                    {
-                        var plItem = new YouTubePlaylistItem(entry.Path.Replace("file:///", ""));
-                        await plItem.LoadInfoAsync();
-                        PlaylistItems.Add(plItem);
-                        this.RaisePropertyChanged("AmountYouTube");
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    //throw;
-                }
-            }
-        }
-
-        public void QuitApp() => Environment.Exit(0);
-
-        private async Task AddYouTubeURLAsync()
-        {
-            if (VideoId.TryParse(YouTubeURL) != null)
-            {
-                var plItem = new YouTubePlaylistItem(YouTubeURL);
-                await plItem.LoadInfoAsync();
-                PlaylistItems.Add(plItem);
-                this.RaisePropertyChanged("AmountYouTube");
-            }
-            else
-            {
-                await foreach (var item in YouTubePlaylistItem.YTClient.Playlists.GetVideosAsync(YouTubeURL))
-                {
-                    var plItem = new YouTubePlaylistItem(item.Url)
+                    var itm = new YoutubePlaylistItem(item.Url, PlaylistItems)
                     {
                         Title = item.Title,
                         Artist = item.Author.Title,
-                        Duration = item.Duration!.Value
+                        Duration = item.Duration.GetValueOrDefault()
                     };
-                    var t = await YouTubePlaylistItem.HClient.GetByteArrayAsync(item.Thumbnails.OrderBy(t => t.Resolution.Area).FirstOrDefault()!.Url);
-                    await using (var bt = new MemoryStream(t))
+                    _ = Task.Run(async () =>
                     {
-                        bt.Position = 0;
-                        plItem.CoverImage = new Bitmap(bt);
-                    }
-
-                    plItem.Loaded = true;
-                    PlaylistItems.Add(plItem);
-                    this.RaisePropertyChanged("AmountYouTube");
-                }
-            }
-            YouTubeURL = "";
-        }
-
-        public async Task AddLocalSongAsync()
-        {
-            var f = new FileDialogFilter()
-            {
-                Extensions = new() { "mp3", "mp4", "flac", "ogg", "wav", "m4a", "wma", "alac" },
-                Name = "Media Files"
-            };
-            var fileDialog = new OpenFileDialog()
-            {
-                AllowMultiple = true,
-                Title = "Select one or multiple audio files!",
-                Directory = "C:\\",
-                Filters = new() { f }
-            };
-            var result = await fileDialog.ShowAsync(Parent);
-            if (result == null || result?.Length == 0)
-                return;
-
-            foreach (var song in result!)
-            {
-                try
-                {
-                    var plItem = new LocalPlaylistItem(song);
-                    await plItem.LoadInfoAsync();
-                    PlaylistItems.Add(plItem);
+                        var covData =
+                            await Consts.HttpClient.GetByteArrayAsync(item.Thumbnails.GetWithHighestResolution().Url);
+                        itm.CoverImage = new Bitmap(new MemoryStream(covData) {Position = 0});
+                    });
+                    itm.IsLoaded = true;
+                    PlaylistItems.Add(itm);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    throw;
                 }
             }
         }
 
-        public async Task SaveAsAsync()
-        {
-            var fileDialog = new SaveFileDialog()
-            {
-                DefaultExtension = "m3u",
-                Title = "Select where you'd like to save your playlist",
-                Filters = new() { new() {Extensions = new(){ "m3u"}, Name = "Playlist"} }
-            };
-            var saveLocation = await fileDialog.ShowAsync(Parent);
-            if (saveLocation == null)
-                return;
+        this.RaisePropertyChanged(nameof(TotalDuration));
+        InputLink = "";
+    }
 
-            var playlist = new M3uPlaylist();
-            foreach (var item in PlaylistItems)
+    public async Task BrowseLocalAsync(Window parent)
+    {
+        var filter = new[] {"mp3", "m4a", "flac", "ogg", ".aac", ".wma", ".alac", ".wav", ".mp4"};
+        var openFile = new OpenFileDialog()
+        {
+            Title = "Select Local Songs to Add",
+            AllowMultiple = true,
+            Directory = "C:\\",
+            Filters = new()
             {
-                playlist.PlaylistEntries.Add(new M3uPlaylistEntry()
+                new()
                 {
-                    Path = item.Location
-                });
+                    Extensions = filter.ToList(),
+                    Name = "AS2 Supported Files"
+                }
             }
-
-            var content = new M3uContent();
-            var playlistText = content.ToText(playlist);
-            await File.WriteAllTextAsync(saveLocation, playlistText);
-            CurrentPlaylistLocation = saveLocation;
-            CurrentPlaylistName = saveLocation.Split("\\").Last();
-        }
-
-        public async Task SaveAsync()
+        };
+        var results = await openFile.ShowAsync(parent);
+        if (results == null || results.Length == 0)
+            return;
+        foreach (var song in results)
         {
-            if (!File.Exists(CurrentPlaylistLocation))
+            PlaylistItems.Add(new LocalPlaylistItem(song, PlaylistItems));
+        }
+    }
+
+    public void RemoveAll()
+        => PlaylistItems.Clear();
+
+    public void NewPlaylist()
+    {
+        PlaylistName = "<New Playlist>";
+        PlaylistPath = "";
+    }
+
+    public async Task OpenPlaylistAsync(Window parent)
+    {
+        var openFile = new OpenFileDialog()
+        {
+            AllowMultiple = false,
+            Title = "Open Playlist",
+            Directory = "C:\\",
+            Filters = new()
             {
-                await SaveAsAsync();
-                return;
-            }
-            var playlist = new M3uPlaylist();
-            foreach (var item in PlaylistItems)
-            {
-                playlist.PlaylistEntries.Add(new M3uPlaylistEntry()
+                new()
                 {
-                    Path = item.Location
-                });
+                    Extensions = new()
+                    {
+                        "m3u",
+                        "m3u8"
+                    },
+                    Name = "M3U Playlist"
+                }
             }
+        };
+        var result = await openFile.ShowAsync(parent);
+        if (result == null || result?.Count() == 0 || string.IsNullOrWhiteSpace(result?[0]) || !File.Exists(result[0]))
+            return;
+        PlaylistPath = result[0];
+        PlaylistName = result[0].Split('\\').Last();
+        var plsTxt = await File.ReadAllTextAsync(result[0]);
+        var content = new M3uContent();
+        var pls = content.GetFromString(plsTxt);
+        if (pls == null)
+            return;
 
-            var content = new M3uContent();
-            var playlistText = content.ToText(playlist);
-            await File.WriteAllTextAsync(CurrentPlaylistLocation, playlistText);
-        }
-
-        public void RemoveAll()
+        RemoveAll();
+        var reg =
+            @"(?i)(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})(?-i)";
+        foreach (var entry in pls.PlaylistEntries)
         {
-            PlaylistItems.Clear();
-            this.RaisePropertyChanged("AmountLocal");
-            this.RaisePropertyChanged("AmountYouTube");
+            var match = Regex.Match(entry.Path, reg);
+            if (match.Success)
+            {
+                var itm = new YoutubePlaylistItem(entry.Path, PlaylistItems);
+                _ = Task.Run(itm.LoadInfoAsync);
+                PlaylistItems.Add(itm);
+            }
+            else if (File.Exists(entry.Path.Replace("file:///", "").Replace('/', '\\')))
+            {
+                try
+                {
+                    var itm = new LocalPlaylistItem(entry.Path.Replace("file:///", "").Replace('/', '\\'), PlaylistItems);
+                    PlaylistItems.Add(itm);
+                }
+                catch (Exception e)
+                {
+                    PlaylistItems.Add(new DummyBasePlaylistItem(entry.Path, PlaylistItems));
+                }
+            }
+            else
+            {
+                PlaylistItems.Add(new DummyBasePlaylistItem(entry.Path, PlaylistItems));
+            }
+        }
+    }
+
+    public async Task SavePlaylistAsync()
+    {
+        if (string.IsNullOrWhiteSpace(PlaylistPath))
+        {
+            var wnd = ((ClassicDesktopStyleApplicationLifetime) Application.Current!.ApplicationLifetime!).MainWindow;
+            if (wnd == null)
+                return; // wat
+            await SavePlaylistAsAsync(wnd);
+            return;
         }
 
-        public void MoveUp(IPlaylistItem item)
+        var content = new M3uContent();
+        var pl = new M3uPlaylist();
+        foreach (var item in PlaylistItems)
         {
-            var currentIndex = PlaylistItems.IndexOf(item);
-            if (currentIndex == 0)
-                return;
-            PlaylistItems.Insert(currentIndex - 1, item);
-            PlaylistItems.RemoveAt(currentIndex + 1);
+            pl.PlaylistEntries.Add(new()
+            {
+                Path = item.Path
+            });
         }
 
-        public void MoveDown(IPlaylistItem item)
-        {
-            var currentIndex = PlaylistItems.IndexOf(item);
-            if (currentIndex == (PlaylistItems.Count - 1))
-                return;
-            PlaylistItems.Insert(currentIndex + 2, item);
-            PlaylistItems.RemoveAt(currentIndex);
-        }
+        await File.WriteAllTextAsync(PlaylistPath, content.ToText(pl));
+    }
 
-        public void RemoveItem(IPlaylistItem item)
+    public async Task SavePlaylistAsAsync(Window parent)
+    {
+        var openFile = new SaveFileDialog()
         {
-            PlaylistItems.Remove(item);
-            this.RaisePropertyChanged("AmountLocal");
-            this.RaisePropertyChanged("AmountYouTube");
-        }
+            Title = "Save Playlist",
+            InitialFileName = "Untitled.m3u",
+            Directory = "C:\\",
+            Filters = new()
+            {
+                new()
+                {
+                    Extensions = new()
+                    {
+                        "m3u",
+                        "m3u8"
+                    },
+                    Name = "M3U Playlist"
+                }
+            }
+        };
+        var result = await openFile.ShowAsync(parent);
+        if (result == null || string.IsNullOrWhiteSpace(result))
+            return;
+        PlaylistPath = result;
+        PlaylistName = result.Split('\\').Last();
+        await SavePlaylistAsync();
     }
 }

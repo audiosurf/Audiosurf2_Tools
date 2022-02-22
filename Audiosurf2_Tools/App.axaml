@@ -9,5 +9,6 @@
     <Application.Styles>
         <FluentTheme Mode="Dark"/>
         <StyleInclude Source="avares://Aura.UI.FluentTheme/AuraUI.xaml"/>
+        <StyleInclude Source="avares://ThemeEditor.Controls.ColorPicker/ColorPicker.axaml"/>
     </Application.Styles>
 </Application>

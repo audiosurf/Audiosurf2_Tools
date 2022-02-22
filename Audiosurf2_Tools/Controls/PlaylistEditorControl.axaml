@@ -1,0 +1,188 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Audiosurf2_Tools.ViewModels"
+             xmlns:miniControls="clr-namespace:Audiosurf2_Tools.MiniControls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="550"
+             x:Class="Audiosurf2_Tools.Controls.PlaylistEditorControl"
+             x:DataType="viewModels:PlaylistEditorViewModel"
+             x:CompileBindings="True">
+
+    <UserControl.DataContext>
+        <viewModels:PlaylistEditorViewModel />
+    </UserControl.DataContext>
+
+    <Grid ColumnDefinitions="*, Auto"
+          RowDefinitions="Auto, *">
+
+        <Grid Grid.Column="0"
+              Grid.Row="0"
+              VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    BorderBrush="#666666"
+                    BorderThickness="1"
+                    CornerRadius="3"
+                    Margin="0,0,1.5,2.5"
+                    VerticalAlignment="Stretch">
+                <Grid ColumnDefinitions="*, Auto">
+                    <TextBox Grid.Column="0"
+                             VerticalAlignment="Stretch"
+                             VerticalContentAlignment="Center"
+                             Watermark="Youtube URL (Video or Playlist)"
+                             Text="{Binding InputLink, Mode=TwoWay}"
+                             BorderThickness="0" 
+                             KeyDown="InputElement_OnKeyDown"/>
+                    <Button Grid.Column="1"
+                            VerticalAlignment="Stretch"
+                            VerticalContentAlignment="Center"
+                            HorizontalAlignment="Center"
+                            HorizontalContentAlignment="Center"
+                            Command="{ReflectionBinding AddYoutubeCommand}"
+                            CommandParameter="{ReflectionBinding InputLink}"
+                            Content="Add" />
+                </Grid>
+            </Border>
+
+            <Button Grid.Column="1"
+                    Margin="1.5,0,1.5,2.5"
+                    Padding="25,0"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    Content="Browse"
+                    Command="{ReflectionBinding BrowseLocalAsync}"
+                    CommandParameter="{ReflectionBinding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
+
+            <Button Grid.Column="2"
+                    Margin="1.5,0,1.5,2.5"
+                    Padding="25,0"
+                    Background="#662222"
+                    VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    HorizontalAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    Content="Remove All"
+                    Command="{ReflectionBinding RemoveAll}" />
+        </Grid>
+
+        <Border Grid.Column="1"
+                Grid.Row="0"
+                CornerRadius="3"
+                Margin="1.5,0,0,2.5"
+                Background="#DD662266">
+            <Image Margin="5"
+                   Source="avares://Audiosurf2_Tools/Assets/playlist.png"
+                   Height="35" />
+        </Border>
+
+        <Border Grid.Column="0"
+                Grid.Row="1"
+                Margin="0,2.5,1.5,0"
+                BorderBrush="#666666"
+                BorderThickness="1"
+                CornerRadius="3">
+            <ListBox Background="#aa222222"
+                     CornerRadius="3"
+                     SelectionMode="Single"
+                     SelectedIndex="{Binding SelectedItemDummy}"
+                     Items="{Binding  PlaylistItems}">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="2.5"/> 
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <miniControls:PlaylistItemControl DataContext="{Binding}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <ScrollViewer Grid.Column="1"
+                      Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      HorizontalAlignment="Stretch"
+                      Margin="1.5,2.5,0,0">
+
+
+            <StackPanel Orientation="Vertical"
+                        Spacing="2.5">
+
+                <Button HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Height="35"
+                        Content="New"
+                        Command="{ReflectionBinding NewPlaylist}" />
+                <Button HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Height="35"
+                        Content="Open"
+                        Command="{ReflectionBinding OpenPlaylistAsync}"
+                        CommandParameter="{ReflectionBinding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
+                <Button HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Height="35"
+                        Content="Save"
+                        Command="{ReflectionBinding SavePlaylistAsync}" />
+                <Button HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Height="35"
+                        Content="Save As"
+                        Command="{ReflectionBinding SavePlaylistAsAsync}"
+                        CommandParameter="{ReflectionBinding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
+                <Separator BorderBrush="#FF333333"
+                           BorderThickness="1" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="Playlist:" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="{Binding PlaylistName}" />
+                <Separator BorderBrush="#FF333333"
+                           BorderThickness="1" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="Total Songs:" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="{Binding PlaylistItems.Count}" />
+                <Separator BorderBrush="#FF333333"
+                           BorderThickness="1" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="Local Songs:" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="{Binding LocalAmount}" />
+                <Separator BorderBrush="#FF333333"
+                           BorderThickness="1" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="Youtube Songs:" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="{Binding YoutubeAmount}" />
+                <Separator BorderBrush="#FF333333"
+                           BorderThickness="1" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="Duration:" />
+                <TextBlock HorizontalAlignment="Center"
+                           Text="{Binding TotalDuration, StringFormat=\{0:d\\.hh\\:mm\\:ss\}}" />
+                <Separator BorderBrush="#FF333333"
+                           BorderThickness="1" />
+            </StackPanel>
+        </ScrollViewer>
+
+    </Grid>
+
+</UserControl>
