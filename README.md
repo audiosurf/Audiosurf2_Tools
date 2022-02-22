@@ -5,7 +5,7 @@ This is a small collection of tools for Audiosurf 2 (with the new Community Patc
 
 ## <u> Installer </u>
 
-A simple installer UI to install the Community Patch (currently disabled/does nothing until the new patch is released).
+A simple installer UI to install the Community Patch.
 
 <img src="Assets/installer.png" alt="Image of the Installer UI">
 
