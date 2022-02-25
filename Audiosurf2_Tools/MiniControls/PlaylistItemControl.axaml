@@ -2,17 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:entities="clr-namespace:Audiosurf2_Tools.Entities"
              mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="82.5"
              x:Class="Audiosurf2_Tools.MiniControls.PlaylistItemControl">
 
-    <UserControl.DataContext>
-        <entities:BasePlaylistItem />
-    </UserControl.DataContext>
-
     <Border BorderBrush="#666666"
             BorderThickness="1"
-            CornerRadius="3">
+            CornerRadius="3"
+            DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}}">
 
         <Grid ColumnDefinitions="80,*,Auto,Auto,Auto"
               RowDefinitions="Auto,Auto">
@@ -27,7 +23,7 @@
                     CornerRadius="3">
                 <Image HorizontalAlignment="Center"
                        VerticalAlignment="Center"
-                       Source="{Binding CoverImage}"
+                       Source="{Binding PlaylistItem.CoverImage}"
                        Height="70"
                        Width="70" />
             </Border>
@@ -36,13 +32,13 @@
                        Grid.Row="0"
                        Margin="5"
                        VerticalAlignment="Center"
-                       Text="{Binding Title}"
+                       Text="{Binding PlaylistItem.Title}"
                        TextWrapping="Wrap" />
             <TextBlock Grid.Column="1"
                        Grid.Row="1"
                        Margin="5"
                        VerticalAlignment="Center"
-                       Text="{Binding Artist}"
+                       Text="{Binding PlaylistItem.Artist}"
                        TextWrapping="Wrap" />
 
             <TextBlock Grid.Column="2"
@@ -50,7 +46,7 @@
                        Grid.RowSpan="2"
                        VerticalAlignment="Center"
                        Margin="5"
-                       Text="{Binding Duration, StringFormat=\{0:mm\\:ss\}}" />
+                       Text="{Binding PlaylistItem.Duration, StringFormat=\{0:mm\\:ss\}}" />
 
             <Button Grid.Column="3"
                     Grid.Row="0"
@@ -59,7 +55,7 @@
                     VerticalContentAlignment="Center"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
-                    Command="{Binding MoveUp}">
+                    Command="{Binding PlaylistItem.MoveUp}">
                 <Image Height="20"
                        Width="20"
                        Source="avares://Audiosurf2_Tools/Assets/arrowup.png" />
@@ -71,7 +67,7 @@
                     VerticalContentAlignment="Center"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
-                    Command="{Binding MoveDown}">
+                    Command="{Binding PlaylistItem.MoveDown}">
                 <Image Height="20"
                        Width="20"
                        Source="avares://Audiosurf2_Tools/Assets/arrowdown.png" />
@@ -87,7 +83,7 @@
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center"
                     Background="#662222"
-                    Command="{Binding RemoveThis}">
+                    Command="{Binding AnimateRemoveAsync}">
                 <Image Height="20"
                        Width="20"
                        Source="avares://Audiosurf2_Tools/Assets/delete.png" />

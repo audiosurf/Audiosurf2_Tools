@@ -9,8 +9,12 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ATL;
+using Audiosurf2_Tools.Controls;
 using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Dapper;
 using PlaylistsNET.Content;
@@ -490,5 +494,26 @@ public class TwitchBotViewModel : ViewModelBase
     private void Client_OnConnected(object? sender, OnConnectedArgs e)
     {
         ChatMessages.Insert(0, "Connected to chat!");
+    }
+
+    public void OpenPopOut()
+    {
+        var cfg = Globals.TryGetGlobal<PopOutSettings>("PopOutSettings");
+        var mainWnd = ((ClassicDesktopStyleApplicationLifetime) Application.Current!.ApplicationLifetime!).MainWindow;
+        if (mainWnd == null)
+            return;
+        var popOut = new TwitchPopOutControl
+        {
+            ParentCollection = Requests
+        };
+        var wnd = new Window
+        {
+            Title = "Requests PopOut",
+            Content = popOut,
+            DataContext = new TwitchPopOutViewModel(),
+            Height = cfg!.Height,
+            Width = cfg.Width
+        };
+        wnd.Show(mainWnd);
     }
 }

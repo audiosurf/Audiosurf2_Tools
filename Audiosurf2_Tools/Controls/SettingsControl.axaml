@@ -49,14 +49,14 @@
                              MaxLength="10"
                              MaxWidth="100"
                              Text="{Binding TwitchMaxQueueSize}" />
-                    
+
                     <ToggleSwitch Content="Enable Max Queue Length"
                                   IsChecked="{Binding TwitchQueueMaxLengthEnabled}" />
                     <TimePicker Margin="0,5,0,15"
                                 IsEnabled="{Binding TwitchQueueMaxLengthEnabled}"
                                 HorizontalAlignment="Left" Header="(Hours | Minutes)"
                                 ClockIdentifier="24HourClock"
-                                SelectedTime="{Binding TwitchQueueMaxLength}"/>
+                                SelectedTime="{Binding TwitchQueueMaxLength}" />
 
                     <ToggleSwitch Content="Enable Cut-Off Time"
                                   IsChecked="{Binding TwitchQueueCutOffTimeEnabled}" />
@@ -85,7 +85,7 @@
                                     VerticalAlignment="Stretch"
                                     VerticalContentAlignment="Center"
                                     Command="{Binding SetLocalRequestsPathAsync}"
-                                    CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"/>
+                                    CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
                         </Grid>
                     </Border>
 
@@ -106,9 +106,8 @@
                              Text="{Binding  TwitchMaxQueueItemsUntilDuplicationsAllowed}" />
                 </StackPanel>
             </GroupBox>
-            <StackPanel Margin="0,5"
-                        Orientation="Horizontal"
-                        Spacing="5">
+            <WrapPanel Margin="0,5"
+                       Orientation="Horizontal">
                 <Button Command="{Binding SaveSettingsAsync}">
                     <StackPanel Orientation="Horizontal"
                                 Spacing="5">
@@ -148,7 +147,7 @@
                                    Text="Delete Everything and Exit" />
                     </StackPanel>
                 </Button>
-            </StackPanel>
+            </WrapPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

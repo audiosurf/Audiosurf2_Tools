@@ -26,26 +26,4 @@ public class TwitchBotControl : UserControl
     {
         AvaloniaXamlLoader.Load(this);
     }
-
-    private void InputElement_OnDoubleTapped(object? sender, RoutedEventArgs e)
-    {
-        var cfg = Globals.TryGetGlobal<PopOutSettings>("PopOutSettings");
-        var mainWnd = ((ClassicDesktopStyleApplicationLifetime) Application.Current!.ApplicationLifetime!).MainWindow;
-        if (mainWnd == null)
-            return;
-        var context = (TwitchBotViewModel) this.DataContext!;
-        var popOut = new TwitchPopOutControl
-        {
-            ParentCollection = context.Requests
-        };
-        var wnd = new Window
-        {
-            Title = "Requests PopOut",
-            Content = popOut,
-            DataContext = new TwitchPopOutViewModel(),
-            Height = cfg!.Height,
-            Width = cfg.Width
-        };
-        wnd.Show(mainWnd);
-    }
 }

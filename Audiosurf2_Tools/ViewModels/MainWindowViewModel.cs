@@ -5,8 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Audiosurf2_Tools.Controls;
 using Audiosurf2_Tools.Entities;
 using Audiosurf2_Tools.Models;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ReactiveUI.Fody.Helpers;
@@ -28,8 +30,12 @@ public class MainWindowViewModel : ViewModelBase
     [Reactive] public ISolidColorBrush TwitchBotHighlight { get; set; }
     [Reactive] public ISolidColorBrush SettingsHighlight { get; set; }
 
+    [Reactive] public UserControl ActiveControl { get; set; }
+    public Dictionary<ToolsPage, UserControl> ToolsControls { get; set; }
+
     public MainWindowViewModel()
     {
+        ToolsControls = new();
         InstallerViewModel = new();
         MoreFoldersViewModel = new();
         PlaylistEditorViewModel = new();
@@ -40,7 +46,7 @@ public class MainWindowViewModel : ViewModelBase
         PlaylistEditorHighlight = Brushes.Transparent;
         TwitchBotHighlight = Brushes.Transparent;
         SettingsHighlight = Brushes.Transparent;
-        OpenTwitchBot();
+        SwitchPage(ToolsPage.TwitchBot);
         _ = Task.Run(LoadCreateSettingsAsync);
     }
 
@@ -168,10 +174,14 @@ public class MainWindowViewModel : ViewModelBase
             TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameResult = settings.BotUsername;
             TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenResult = settings.TwitchToken;
             TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationResult = settings.AS2Location;
-            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelDone = !string.IsNullOrWhiteSpace(settings.ChatChannel);
-            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameDone = !string.IsNullOrWhiteSpace(settings.BotUsername);
-            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenDone = !string.IsNullOrWhiteSpace(settings.TwitchToken);
-            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationDone = !string.IsNullOrWhiteSpace(settings.AS2Location);
+            TwitchBotViewModel.TwitchBotSetupViewModel.ChatChannelDone =
+                !string.IsNullOrWhiteSpace(settings.ChatChannel);
+            TwitchBotViewModel.TwitchBotSetupViewModel.BotUsernameDone =
+                !string.IsNullOrWhiteSpace(settings.BotUsername);
+            TwitchBotViewModel.TwitchBotSetupViewModel.TwitchTokenDone =
+                !string.IsNullOrWhiteSpace(settings.TwitchToken);
+            TwitchBotViewModel.TwitchBotSetupViewModel.AS2LocationDone =
+                !string.IsNullOrWhiteSpace(settings.AS2Location);
             Globals.GlobalEntites.Add("TwitchSettings", settings);
         }
 
@@ -198,6 +208,47 @@ public class MainWindowViewModel : ViewModelBase
 
     public void OpenCloseSidebar()
         => OpenSidebar = !OpenSidebar;
+
+    public void SwitchPage(ToolsPage page)
+    {
+        switch (page)
+        {
+            case ToolsPage.Installer:
+                OpenInstaller();
+                if (!ToolsControls.ContainsKey(page))
+                    ToolsControls.Add(page, new InstallerControl {DataContext = InstallerViewModel});
+                ActiveControl = ToolsControls[page];
+                break;
+
+            case ToolsPage.MoreFolders:
+                OpenMoreFolders();
+                if (!ToolsControls.ContainsKey(page))
+                    ToolsControls.Add(page, new MoreFoldersControl {DataContext = MoreFoldersViewModel});
+                ActiveControl = ToolsControls[page];
+                break;
+
+            case ToolsPage.PlaylistEditor:
+                OpenPlaylistEditor();
+                if (!ToolsControls.ContainsKey(page))
+                    ToolsControls.Add(page, new PlaylistEditorControl {DataContext = PlaylistEditorViewModel});
+                ActiveControl = ToolsControls[page];
+                break;
+
+            case ToolsPage.TwitchBot:
+                OpenTwitchBot();
+                if (!ToolsControls.ContainsKey(page))
+                    ToolsControls.Add(page, new TwitchBotControl {DataContext = TwitchBotViewModel});
+                ActiveControl = ToolsControls[page];
+                break;
+
+            case ToolsPage.Settings:
+                OpenSettings();
+                if (!ToolsControls.ContainsKey(page))
+                    ToolsControls.Add(page, new SettingsControl {DataContext = SettingsViewModel});
+                ActiveControl = ToolsControls[page];
+                break;
+        }
+    }
 
     public void OpenInstaller()
     {
@@ -248,4 +299,13 @@ public class MainWindowViewModel : ViewModelBase
                 TwitchBotViewModel.IsOpen, SettingsViewModel.IsOpen) =
             (false, false, false, false, true);
     }
+}
+
+public enum ToolsPage
+{
+    Installer,
+    MoreFolders,
+    PlaylistEditor,
+    TwitchBot,
+    Settings
 }

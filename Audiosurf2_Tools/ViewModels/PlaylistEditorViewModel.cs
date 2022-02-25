@@ -62,7 +62,7 @@ public class PlaylistEditorViewModel : ViewModelBase
         if (vid != null)
         {
             var itm = new YoutubePlaylistItem(vid, PlaylistItems);
-            _ = Task.Run(itm.LoadInfoAsync);
+            await itm.LoadInfoAsync();
             PlaylistItems.Add(itm);
         }
         else if (pls != null)
@@ -90,6 +90,7 @@ public class PlaylistEditorViewModel : ViewModelBase
                 {
                     Console.WriteLine(e);
                 }
+                await Task.Delay(5);
             }
         }
 
@@ -120,6 +121,7 @@ public class PlaylistEditorViewModel : ViewModelBase
         foreach (var song in results)
         {
             PlaylistItems.Add(new LocalPlaylistItem(song, PlaylistItems));
+            await Task.Delay(5);
         }
     }
 
@@ -191,6 +193,8 @@ public class PlaylistEditorViewModel : ViewModelBase
             {
                 PlaylistItems.Add(new DummyBasePlaylistItem(entry.Path, PlaylistItems));
             }
+
+            await Task.Delay(5);
         }
     }
 

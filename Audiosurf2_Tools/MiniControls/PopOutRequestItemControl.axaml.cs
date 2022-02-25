@@ -1,17 +1,21 @@
-﻿using Audiosurf2_Tools.Controls;
+﻿using System.Threading.Tasks;
+using Audiosurf2_Tools.Controls;
 using Audiosurf2_Tools.Models;
 using Audiosurf2_Tools.ViewModels;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Metadata;
 using Avalonia.Markup.Xaml;
 
 namespace Audiosurf2_Tools.MiniControls;
 
+[PseudoClasses(":IsRemoving")]
 public class PopOutRequestItemControl : UserControl
 {
     public PopOutRequestItemControl()
     {
         InitializeComponent();
+        UpdatePseudoClasses(false);
     }
 
     private void InitializeComponent()
@@ -44,6 +48,19 @@ public class PopOutRequestItemControl : UserControl
     {
         get => GetValue(ParentContextProperty);
         set => SetValue(ParentContextProperty, value);
+    }
+    
+    private void UpdatePseudoClasses(bool isRemoving)
+    {
+        PseudoClasses.Set(":IsRemoving", isRemoving);
+    }
+
+    public async Task AnimateRemoveAsync()
+    {
+        UpdatePseudoClasses(true);
+        await Task.Delay(325);
+        RequestItem.RemoveAndCount();
+        UpdatePseudoClasses(false);
     }
     
 }
