@@ -486,7 +486,7 @@ public class TwitchBotViewModel : ViewModelBase
 
     private void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
-        ChatMessages.Insert(0, $"{e.ChatMessage.DisplayName} ({e.ChatMessage.UserId}): {e.ChatMessage.Message}");
+        ChatMessages.Insert(0, $"{e.ChatMessage.DisplayName}: {e.ChatMessage.Message}");
         if (ChatMessages.Count > 100)
             ChatMessages.RemoveAt(ChatMessages.Count - 1);
     }
