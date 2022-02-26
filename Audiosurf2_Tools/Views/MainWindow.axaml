@@ -27,7 +27,8 @@
                    HorizontalAlignment="Stretch"
                    PanePlacement="Left"
                    CompactPaneLength="42.5"
-                   DisplayMode="CompactInline"
+                   DisplayMode="CompactOverlay"
+                   UseLightDismissOverlayMode="True"
                    IsPaneOpen="{Binding OpenSidebar}"
                    OpenPaneLength="200">
             <SplitView.Pane>
