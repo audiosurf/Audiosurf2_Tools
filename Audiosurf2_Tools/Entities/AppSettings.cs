@@ -18,4 +18,5 @@ public class AppSettings
     public DateTimeOffset TwitchQueueCutOffTime { get; set; } = DateTime.Now;
     public bool TwitchEnableLocalRequests { get; set; } = false;
     public string TwitchLocalRequestPath { get; set; } = "";
+    public int TwitchLocalRequestMaxSizeMB { get; set; } = 50;
 }

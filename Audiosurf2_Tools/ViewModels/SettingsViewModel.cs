@@ -30,6 +30,7 @@ public class SettingsViewModel : ViewModelBase
 
     [Reactive] public bool TwitchEnableLocalRequests { get; set; } = false;
     [Reactive] public string TwitchLocalRequestPath { get; set; } = "";
+    [Reactive] public int TwitchLocalRequestMaxSizeMB { get; set; } = 50;
 
 
     public async Task SaveSettingsAsync()
@@ -47,6 +48,7 @@ public class SettingsViewModel : ViewModelBase
         cfg.TwitchQueueCutOffTime = TwitchQueueCutOffTimeDate + TwitchQueueCutOffTimeTime;
         cfg.TwitchEnableLocalRequests = TwitchEnableLocalRequests;
         cfg.TwitchLocalRequestPath = TwitchLocalRequestPath;
+        cfg.TwitchLocalRequestMaxSizeMB = TwitchLocalRequestMaxSizeMB;
         var text = JsonSerializer.Serialize(cfg);
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"), text);

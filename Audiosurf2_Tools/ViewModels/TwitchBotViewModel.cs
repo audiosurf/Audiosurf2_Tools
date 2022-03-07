@@ -169,17 +169,43 @@ public class TwitchBotViewModel : ViewModelBase
 
         else if (cfg.TwitchEnableLocalRequests)
         {
-            if (!File.Exists(Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length))))
+            _ = Task.Run(() =>
+                LocalRequestHelperAsync(
+                    Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length)),
+                    e.ChatMessage.Username));
+        }
+    }
+
+    public async Task LocalRequestHelperAsync(string path, string username)
+    {
+        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+        if (!File.Exists(path))
+        {
+            await Task.Delay(5000);
+            if (!File.Exists(path))
             {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{e.ChatMessage.Username} File not found, did you type the name wrong? (you also need to type the extension like .mp3 or .flac)");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} File not found, did you type the name wrong? (you also need to type the extension like .mp3 or .flac)"); 
+                });
                 return;
             }
-            _ = Task.Run(() =>
-                HandleSongRequestAsync(
-                    Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length)),
-                    e.ChatMessage.Username, false));
         }
+
+        var fileInfo = new FileInfo(path);
+        if ((fileInfo.Length / 2048) > cfg!.TwitchLocalRequestMaxSizeMB)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                    $"@{username} File is too big, the max size allowed is {cfg.TwitchLocalRequestMaxSizeMB}MB");
+                fileInfo.Delete();
+            });
+            return;
+        }
+        
+        await HandleSongRequestAsync(path, username, false);
     }
 
     public bool InitialCanRequestChecks(string username)

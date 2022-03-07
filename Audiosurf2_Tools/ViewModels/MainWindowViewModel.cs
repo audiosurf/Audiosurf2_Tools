@@ -156,6 +156,7 @@ public class MainWindowViewModel : ViewModelBase
             SettingsViewModel.TwitchQueueCutOffTimeTime = cfg.TwitchQueueCutOffTime.TimeOfDay;
             SettingsViewModel.TwitchEnableLocalRequests = cfg.TwitchEnableLocalRequests;
             SettingsViewModel.TwitchLocalRequestPath = cfg.TwitchLocalRequestPath;
+            SettingsViewModel.TwitchLocalRequestMaxSizeMB = cfg.TwitchLocalRequestMaxSizeMB;
         });
     }
 

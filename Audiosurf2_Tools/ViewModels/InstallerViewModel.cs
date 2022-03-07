@@ -47,7 +47,7 @@ public class InstallerViewModel : ViewModelBase
     {
         GameLocation = await ToolUtils.GetGameDirectoryAsync();
     }
-    
+
     public async Task BrowserLocation(Window parent)
     {
         var openFol = new OpenFolderDialog()
@@ -82,12 +82,7 @@ public class InstallerViewModel : ViewModelBase
         if (as2Ver.FileVersion?.StartsWith("2017.4.40") == true)
         {
             UnityVersion = as2Ver.FileVersion;
-            BetaChannel = "bleedingedge";
-        }
-        else if (as2Ver.FileVersion?.StartsWith("2017") == true)
-        {
-            UnityVersion = as2Ver.FileVersion;
-            BetaChannel = "none";
+            BetaChannel = "latest/bleedingedge";
         }
         else if (as2Ver.FileVersion?.StartsWith("5.5") == true)
         {
@@ -105,16 +100,18 @@ public class InstallerViewModel : ViewModelBase
             IsPatchInstalled = true;
             var version = await File.ReadAllTextAsync(Path.Combine(GameLocation,
                 "Audiosurf2_Data\\patchupdater\\installedversion.txt"));
-            if (version.Contains('.'))
-            {
-                PatchVersion = version;
-                PatchChannel = "latest";
-            }
-            else
-            {
-                PatchVersion = version;
-                PatchChannel = "beta patch";
-            }
+
+            PatchVersion = version;
+            PatchChannel = "beta patch";
+        }
+        else if (Directory.Exists(Path.Combine(GameLocation, "Audiosurf2_Data\\Updater")))
+        {
+            IsPatchInstalled = true;
+            var version = await File.ReadAllTextAsync(Path.Combine(GameLocation,
+                "Audiosurf2_Data\\Updater\\version.txt"));
+
+            PatchVersion = version;
+            PatchChannel = "latest patch";
         }
     }
 

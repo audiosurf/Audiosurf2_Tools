@@ -67,8 +67,20 @@
                                 IsEnabled="{Binding TwitchQueueCutOffTimeEnabled}"
                                 SelectedTime="{Binding TwitchQueueCutOffTimeTime}" />
 
-                    <ToggleSwitch Content="Enable Local Requests"
-                                  IsChecked="{Binding TwitchEnableLocalRequests}" />
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="5">
+                        <ToggleSwitch Content="Enable Local Requests"
+                                      IsChecked="{Binding TwitchEnableLocalRequests}" />
+                        <TextBlock Foreground="#AA2222"
+                                   VerticalAlignment="Bottom"
+                                   Margin="-60,0,0,10"
+                                   Text="Experimental"/>
+                        <Button VerticalAlignment="Bottom"
+                                Content="Info"
+                                Command="{Binding OpenHelpText, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}}}"
+                                Margin="0,0,0,5"
+                                FontSize="10"/>
+                    </StackPanel>
                     <Border Margin="0,5,0,15"
                             IsEnabled="{Binding TwitchEnableLocalRequests}"
                             BorderBrush="#666666"
@@ -88,6 +100,12 @@
                                     CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}" />
                         </Grid>
                     </Border>
+                    <TextBlock Text="Max Local Request Size (MB)"/>
+                    <NumericUpDown Margin="0,5,0,15"
+                                   IsEnabled="{Binding TwitchEnableLocalRequests}"
+                                   HorizontalAlignment="Left"
+                                   Width="130"
+                                   Value="{Binding TwitchLocalRequestMaxSizeMB}"/>
 
                     <TextBlock Text="Max Recent Request Count:"
                                TextWrapping="Wrap" />
