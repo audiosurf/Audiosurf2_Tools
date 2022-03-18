@@ -179,10 +179,13 @@ public class TwitchBotViewModel : ViewModelBase
     public async Task LocalRequestHelperAsync(string path, string username)
     {
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
-        if (!File.Exists(path))
+        
+        var fileInfo = new FileInfo(path);
+        if (!fileInfo.Exists)
         {
             await Task.Delay(5000);
-            if (!File.Exists(path))
+            fileInfo = new FileInfo(path);
+            if (!fileInfo.Exists)
             {
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -193,8 +196,7 @@ public class TwitchBotViewModel : ViewModelBase
             }
         }
 
-        var fileInfo = new FileInfo(path);
-        if ((fileInfo.Length / 2048) > cfg!.TwitchLocalRequestMaxSizeMB)
+        if ((fileInfo.Length / 1024) / 1024 > cfg!.TwitchLocalRequestMaxSizeMB)
         {
             Dispatcher.UIThread.Post(() =>
             {
