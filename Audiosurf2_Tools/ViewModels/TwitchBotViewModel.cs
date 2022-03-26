@@ -366,87 +366,96 @@ public class TwitchBotViewModel : ViewModelBase
     public async Task HandleSongRequestAsync(string id, string username, bool isYoutube = true)
     {
         //more checks here
-        var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
-        var mostRecent = PastRequests.Take(cfg!.TwitchMaxRecentAgeBeforeDuplicateError);
-        if (mostRecent.Any(x => x.Location.Contains(id)))
+        try
         {
-            Dispatcher.UIThread.Post(() =>
-            {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} This was recently played!");
-            });
-            return;
-        }
-        if (Requests.TakeLast(cfg!.TwitchMaxQueueItemsUntilDuplicationsAllowed).Any(x => x.Location.Contains(id)))
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} This is already in the queue!");
-            });
-            return;
-        }
-        if (isYoutube)
-        {
-            var song = await Consts.YoutubeClient.Videos.GetAsync(id);
-
-            if (song.Duration == null)
+            var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
+            var mostRecent = PastRequests.Take(cfg!.TwitchMaxRecentAgeBeforeDuplicateError);
+            if (mostRecent.Any(x => x.Location.Contains(id)))
             {
                 Dispatcher.UIThread.Post(() =>
                 {
                     _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                        $"@{username} Livestreams are not allowed!");
+                        $"@{username} This was recently played!");
                 });
                 return;
             }
-
-            if (song.Duration?.TotalSeconds > cfg.TwitchMaxSongLengthSeconds)
+            if (Requests.TakeLast(cfg!.TwitchMaxQueueItemsUntilDuplicationsAllowed).Any(x => x.Location.Contains(id)))
             {
                 Dispatcher.UIThread.Post(() =>
                 {
                     _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                        $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                        $"@{username} This is already in the queue!");
                 });
                 return;
             }
-
-            Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title, song.Author.Title, song.Url, username,
-                song.Duration ?? TimeSpan.Zero));
-            Dispatcher.UIThread.Post(() =>
+            if (isYoutube)
             {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} added {song.Title} to the queue!");
-            });
-        }
+                var song = await Consts.YoutubeClient.Videos.GetAsync(id);
 
-        else
+                if (song.Duration == null)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                            $"@{username} Livestreams are not allowed!");
+                    });
+                    return;
+                }
+
+                if (song.Duration?.TotalSeconds > cfg.TwitchMaxSongLengthSeconds)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                            $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                    });
+                    return;
+                }
+
+                Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title, song.Author.Title, song.Url, username,
+                    song.Duration ?? TimeSpan.Zero));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} added {song.Title} to the queue!");
+                });
+            }
+
+            else
+            {
+                var song = new Track(id);
+
+                if (song.Duration > cfg.TwitchMaxSongLengthSeconds)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                            $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
+                    });
+                    return;
+                }
+
+                Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title ?? id.Split('\\').Last(), song.Artist, id, username,
+                    TimeSpan.FromSeconds(song.Duration)));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
+                        $"@{username} added {song.Title ?? id.Split('\\').Last()} to the queue!");
+                });
+            }
+
+
+            if (requestTimes.ContainsKey(username))
+                requestTimes[username] = DateTimeOffset.Now;
+            else
+                requestTimes.TryAdd(username, DateTimeOffset.Now);
+
+
+        }
+        catch (Exception e)
         {
-            var song = new Track(id);
-
-            if (song.Duration > cfg.TwitchMaxSongLengthSeconds)
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                        $"@{username} Song too long, maximum allowed song length is {TimeSpan.FromSeconds(cfg.TwitchMaxSongLengthSeconds).TotalMinutes} Minutes!");
-                });
-                return;
-            }
-
-            Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title ?? id.Split('\\').Last(), song.Artist, id, username,
-                TimeSpan.FromSeconds(song.Duration)));
-            Dispatcher.UIThread.Post(() =>
-            {
-                _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                    $"@{username} added {song.Title ?? id.Split('\\').Last()} to the queue!");
-            });
+            ChatMessages.Insert(0, $"[DEBUG] Cant process request:\n {e.Message}");
         }
-        
-        
-        if (requestTimes.ContainsKey(username))
-            requestTimes[username] = DateTimeOffset.Now;
-        else
-            requestTimes.TryAdd(username, DateTimeOffset.Now);
     }
 
     public async Task RequestCheckLoop()
