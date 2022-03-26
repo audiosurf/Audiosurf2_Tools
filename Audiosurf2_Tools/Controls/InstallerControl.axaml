@@ -73,6 +73,7 @@
                 Margin="2.5"
                 Height="50"
                 Content="Install"
+                IsEnabled="{Binding CanInstall}"
                 Command="{Binding InstallCommand}" />
 
         <TextBlock Grid.Column="0"

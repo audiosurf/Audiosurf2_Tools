@@ -24,7 +24,7 @@ public class InstallerViewModel : ViewModelBase
     [Reactive] public string StatusText { get; set; } = "nothing";
     [Reactive] public int ProgressValue { get; set; }
     [Reactive] public ReactiveCommand<Unit, Unit> InstallCommand { get; set; }
-
+    [Reactive] public bool CanInstall { get; set; } = false;
     [Reactive] public bool IsGameInstalled { get; set; }
     [Reactive] public bool IsPatchInstalled { get; set; }
 
@@ -39,8 +39,7 @@ public class InstallerViewModel : ViewModelBase
         var watCmd = ReactiveCommand.CreateFromTask<string>(FindGameAndPatchVersionAsync);
         this.WhenAnyValue(x => x.GameLocation)
             .InvokeCommand(watCmd);
-        var canInstall = this.WhenAny(x => x.GameLocation, (thing) => !string.IsNullOrWhiteSpace(thing.Value));
-        InstallCommand = ReactiveCommand.CreateFromTask(InstallPatchAsync, canInstall);
+        InstallCommand = ReactiveCommand.CreateFromTask(InstallPatchAsync);
     }
 
     public async Task AutoFindAsync()
@@ -76,13 +75,14 @@ public class InstallerViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(GameLocation))
             return;
         IsGameInstalled = true;
-
+        CanInstall = false;
         var as2Ver = FileVersionInfo.GetVersionInfo(Path.Combine(GameLocation, "Audiosurf2.exe"));
 
         if (as2Ver.FileVersion?.StartsWith("2017.4.40") == true)
         {
             UnityVersion = as2Ver.FileVersion;
             BetaChannel = "latest/bleedingedge";
+            CanInstall = true;
         }
         else if (as2Ver.FileVersion?.StartsWith("5.5") == true)
         {
@@ -121,7 +121,7 @@ public class InstallerViewModel : ViewModelBase
         {
             ProgressValue = 0;
             StatusText = "Downloading Patch .zip";
-            var zipStream = await Consts.HttpClient.GetStreamAsync("https://aiae.ovh/newpatch/audiosurf2_newpatch.zip");
+            var zipStream = await Consts.HttpClient.GetStreamAsync("https://files.audiosurf2.info/newpatch/audiosurf2_community_patch.zip");
             ProgressValue = 60;
             StatusText = "Extracting files...";
             var zip = new ZipArchive(zipStream);
