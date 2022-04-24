@@ -123,7 +123,7 @@ public class TwitchBotSetupViewModel : ViewModelBase
     {
         var openFolder = new OpenFolderDialog()
         {
-            Directory = "C:\\"
+            Title = "Select AS2 Directory"
         };
         var dir = await openFolder.ShowAsync(((ClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!).MainWindow);
         AS2LocationInput = dir ?? "";
@@ -141,7 +141,7 @@ public class TwitchBotSetupViewModel : ViewModelBase
         };
         var text = JsonSerializer.Serialize(settings);
         Globals.GlobalEntites.Add("TwitchSettings", settings);
-        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"), text);
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json".Replace('\\', Path.DirectorySeparatorChar)), text);
         if (File.Exists(Path.Combine(settings.AS2Location, "MoreFolders.json")))
         {
             var lines = await File.ReadAllTextAsync(Path.Combine(settings.AS2Location, "MoreFolders.json"));

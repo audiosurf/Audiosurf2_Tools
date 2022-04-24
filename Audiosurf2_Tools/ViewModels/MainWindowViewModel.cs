@@ -76,24 +76,24 @@ public class MainWindowViewModel : ViewModelBase
     public async Task InitSettingsAsync()
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\Settings.json")))
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\Settings.json".Replace('\\', Path.DirectorySeparatorChar))))
         {
             var newCfg = new AppSettings();
             var newCfgText = JsonSerializer.Serialize(newCfg);
-            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"), newCfgText);
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json".Replace('\\', Path.DirectorySeparatorChar)), newCfgText);
         }
 
-        var cfgText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"));
+        var cfgText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json".Replace('\\', Path.DirectorySeparatorChar)));
         var cfg = JsonSerializer.Deserialize<AppSettings>(cfgText);
 
-        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json")))
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json".Replace('\\', Path.DirectorySeparatorChar))))
         {
             var newCfg = new PopOutSettings();
             var newCfgText = JsonSerializer.Serialize(newCfg);
-            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"), newCfgText);
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json".Replace('\\', Path.DirectorySeparatorChar)), newCfgText);
         }
 
-        var popOutCfgString = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"));
+        var popOutCfgString = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json".Replace('\\', Path.DirectorySeparatorChar)));
         var popOutCfg = JsonSerializer.Deserialize<PopOutSettings>(popOutCfgString);
         Globals.GlobalEntites.Add("Settings", cfg!);
         Globals.GlobalEntites.Add("PopOutSettings", popOutCfg!);
@@ -143,6 +143,8 @@ public class MainWindowViewModel : ViewModelBase
         Dispatcher.UIThread.Post(() =>
         {
             SettingsViewModel.TwitchCommandPrefix = cfg!.TwitchCommandPrefix;
+            SettingsViewModel.TwitchUseReward = cfg!.TwitchUseReward;
+            SettingsViewModel.TwitchRewardId = cfg!.TwitchRewardId;
             SettingsViewModel.TwitchMaxQueueItemsUntilDuplicationsAllowed =
                 cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed;
             SettingsViewModel.TwitchMaxRecentAgeBeforeDuplicationError = cfg.TwitchMaxRecentAgeBeforeDuplicateError;
@@ -163,11 +165,11 @@ public class MainWindowViewModel : ViewModelBase
     public async Task LoadTwitchSettingsVMAsync()
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
-            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"), "#EXTM3U");
-        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json")))
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u".Replace('\\', Path.DirectorySeparatorChar))))
+            await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u".Replace('\\', Path.DirectorySeparatorChar)), "#EXTM3U");
+        if (!File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json".Replace('\\', Path.DirectorySeparatorChar))))
             return;
-        var data = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"));
+        var data = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json".Replace('\\', Path.DirectorySeparatorChar)));
         var settings = JsonSerializer.Deserialize<TwitchSettings>(data);
         if (settings != null)
         {
@@ -186,7 +188,7 @@ public class MainWindowViewModel : ViewModelBase
             Globals.GlobalEntites.Add("TwitchSettings", settings);
         }
 
-        if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u")))
+        if (File.Exists(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u".Replace('\\', Path.DirectorySeparatorChar))))
             await Dispatcher.UIThread.InvokeAsync(TwitchBotViewModel.ReloadRequestsPlaylist);
 
         if (File.Exists(Path.Combine(settings!.AS2Location, "MoreFolders.json")))

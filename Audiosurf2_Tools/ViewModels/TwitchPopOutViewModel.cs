@@ -119,7 +119,7 @@ public class TwitchPopOutViewModel : ViewModelBase
         };
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var newCfgText = JsonSerializer.Serialize(cfg);
-        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"), newCfgText);
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json").Replace('\\', Path.DirectorySeparatorChar), newCfgText);
         Globals.GlobalEntites["PopOutSettings"] = cfg;
     }
 }

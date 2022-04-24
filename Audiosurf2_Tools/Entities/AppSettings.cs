@@ -5,6 +5,8 @@ namespace Audiosurf2_Tools.Entities;
 public class AppSettings
 {
     public string TwitchCommandPrefix { get; set; } = "!";
+    public bool TwitchUseReward { get; set; }
+    public string TwitchRewardId { get; set; }
     public int TwitchMaxQueueItemsUntilDuplicationsAllowed { get; set; } = 100;
     public int TwitchMaxRecentAgeBeforeDuplicateError { get; set; } = 5;
     public int TwitchMaxQueueSize { get; set; } = 25;

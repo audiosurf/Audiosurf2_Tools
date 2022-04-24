@@ -15,7 +15,11 @@ public class DummyBasePlaylistItem : BasePlaylistItem
     {
         Path = path;
         IsLoaded = true;
+#if LINUX
+        Title = Path.Split('/').Last();
+#else
         Title = Path.Split('\\').Last();
+#endif
         Artist = "n/a";
     }
 }

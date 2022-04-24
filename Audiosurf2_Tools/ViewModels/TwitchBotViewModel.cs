@@ -27,12 +27,15 @@ using TwitchLib.Client.Models;
 using TwitchLib.Communication.Clients;
 using TwitchLib.Communication.Events;
 using TwitchLib.Communication.Models;
+using TwitchLib.PubSub;
+using TwitchLib.PubSub.Events;
 
 namespace Audiosurf2_Tools.ViewModels;
 
 public class TwitchBotViewModel : ViewModelBase
 {
     private TwitchClient _twitchClient { get; set; }
+    private TwitchPubSub _twitchPubSub { get; set; }
     [Reactive] private bool IsConnected { get; set; }
     [Reactive] public bool RequestsOpen { get; set; } = true;
     [Reactive] public bool IsOpen { get; set; }
@@ -104,7 +107,8 @@ public class TwitchBotViewModel : ViewModelBase
                 new ConnectionCredentials(TwitchBotSetupViewModel.BotUsernameResult,
                     TwitchBotSetupViewModel.TwitchTokenResult),
                 TwitchBotSetupViewModel.ChatChannelResult);
-            IsConnected = await Task.Run(_twitchClient.Connect);
+            
+            IsConnected = (await Task.Run(_twitchClient.Connect));
         }
         catch (Exception e)
         {
@@ -151,7 +155,13 @@ public class TwitchBotViewModel : ViewModelBase
     {
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         var prefix = cfg!.TwitchCommandPrefix;
-        if (!e.ChatMessage.Message.ToLower().StartsWith(prefix + "sr ")) 
+        var messageText = e.ChatMessage.Message;
+        if (cfg.TwitchUseReward && e.ChatMessage.CustomRewardId == cfg.TwitchRewardId)
+        {
+            prefix = "";
+            messageText = "sr " + messageText;
+        }
+        if (!messageText.ToLower().StartsWith(prefix + "sr ")) 
             return;
         
         if(!InitialCanRequestChecks(e.ChatMessage.Username))
@@ -161,7 +171,7 @@ public class TwitchBotViewModel : ViewModelBase
         var reg =
             @"(?i)(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\?(?:\S*?&?v\=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})(?-i)";
 
-        var match = Regex.Match(e.ChatMessage.Message.Substring(length), reg);
+        var match = Regex.Match(messageText.Substring(length), reg);
         if (match.Success && match.Groups[1].Value.Length == 11)
         {
             _ = Task.Run(() => HandleSongRequestAsync(match.Groups[1].Value, e.ChatMessage.Username));
@@ -171,7 +181,7 @@ public class TwitchBotViewModel : ViewModelBase
         {
             _ = Task.Run(() =>
                 LocalRequestHelperAsync(
-                    Path.Combine(cfg.TwitchLocalRequestPath, e.ChatMessage.Message.Substring(length)),
+                    Path.Combine(cfg.TwitchLocalRequestPath, messageText.Substring(length)),
                     e.ChatMessage.Username));
         }
     }
@@ -209,7 +219,7 @@ public class TwitchBotViewModel : ViewModelBase
         
         await HandleSongRequestAsync(path, username, false);
     }
-
+    
     public bool InitialCanRequestChecks(string username)
     {
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
@@ -283,7 +293,7 @@ public class TwitchBotViewModel : ViewModelBase
         Requests.Clear();
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var content = new M3uContent();
-        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"));
+        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u".Replace('\\', Path.DirectorySeparatorChar)));
         var playlist = content.GetFromString(plsText);
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         foreach (var vid in playlist.PlaylistEntries)
@@ -317,7 +327,7 @@ public class TwitchBotViewModel : ViewModelBase
     {
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var content = new M3uContent();
-        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"));
+        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u".Replace('\\', Path.DirectorySeparatorChar)));
         var playlist = content.GetFromString(plsText);
         playlist.PlaylistEntries.Clear();
         foreach (var vid in Requests)
@@ -330,7 +340,7 @@ public class TwitchBotViewModel : ViewModelBase
         }
 
         plsText = content.ToText(playlist);
-        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u"), plsText);
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchRequests.m3u".Replace('\\', Path.DirectorySeparatorChar)), plsText);
     }
 
     public async Task RebuildPastRequestsM3U()
@@ -347,7 +357,7 @@ public class TwitchBotViewModel : ViewModelBase
         }
 
         var content = new M3uContent();
-        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"));
+        var plsText = await File.ReadAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u").Replace('\\', Path.DirectorySeparatorChar));
         var playlist = content.GetFromString(plsText);
         playlist.PlaylistEntries.Clear();
         foreach (var vid in PastRequests)
@@ -360,7 +370,7 @@ public class TwitchBotViewModel : ViewModelBase
         }
 
         plsText = content.ToText(playlist);
-        await File.WriteAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u"), plsText);
+        await File.WriteAllTextAsync(Path.Combine(appdata, $"AS2Tools\\{titleDate}.m3u".Replace('\\', Path.DirectorySeparatorChar)), plsText);
     }
 
     public async Task HandleSongRequestAsync(string id, string username, bool isYoutube = true)
@@ -435,12 +445,12 @@ public class TwitchBotViewModel : ViewModelBase
                     return;
                 }
 
-                Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title ?? id.Split('\\').Last(), song.Artist, id, username,
+                Requests.Add(new TwitchRequestItem(Requests, PastRequests, song.Title ?? id.Split(Path.DirectorySeparatorChar).Last(), song.Artist, id, username,
                     TimeSpan.FromSeconds(song.Duration)));
                 Dispatcher.UIThread.Post(() =>
                 {
                     _twitchClient.SendMessage(TwitchBotSetupViewModel.ChatChannelResult,
-                        $"@{username} added {song.Title ?? id.Split('\\').Last()} to the queue!");
+                        $"@{username} added {song.Title ?? id.Split(Path.DirectorySeparatorChar).Last()} to the queue!");
                 });
             }
 
@@ -469,7 +479,7 @@ public class TwitchBotViewModel : ViewModelBase
                 continue;
 
             await using var con = new SQLiteConnection("Data Source=" + Path.Combine(
-                TwitchBotSetupViewModel.AS2LocationResult, "Audiosurf2_Data\\cache\\db\\AudiosurfMusicLibrary.aml"));
+                TwitchBotSetupViewModel.AS2LocationResult, "Audiosurf2_Data\\cache\\db\\AudiosurfMusicLibrary.aml".Replace('\\', Path.DirectorySeparatorChar)));;
             try
             {
                 var latestPlayedYoutubeEntry =
@@ -492,8 +502,8 @@ public class TwitchBotViewModel : ViewModelBase
                 {
                     toRemove = Requests.FirstOrDefault(x =>
                         x.Location.ToLower()
-                            .Replace('/', '\\')
-                            .Replace("\\\\", "\\") == latestPlayedLocalEntryByLastPlayTime.Path);
+                            .Replace('/', Path.DirectorySeparatorChar)
+                            .Replace("\\\\", $"{Path.DirectorySeparatorChar}") == latestPlayedLocalEntryByLastPlayTime.Path);
                 }
 
                 //By last added ID, maybe not use this
@@ -523,6 +533,11 @@ public class TwitchBotViewModel : ViewModelBase
 
     private void Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
+        if (e.ChatMessage.Message.ToLower() == "!reward" && e.ChatMessage.IsBroadcaster && e.ChatMessage.CustomRewardId != null)
+        {
+            _twitchClient.SendMessage(e.ChatMessage.Channel, "The ID for this reward is:\n" + e.ChatMessage.CustomRewardId);
+            return;
+        }
         ChatMessages.Insert(0, $"{e.ChatMessage.DisplayName}: {e.ChatMessage.Message}");
         if (ChatMessages.Count > 100)
             ChatMessages.RemoveAt(ChatMessages.Count - 1);

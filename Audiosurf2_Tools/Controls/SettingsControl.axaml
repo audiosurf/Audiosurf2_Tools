@@ -26,7 +26,18 @@
                              HorizontalAlignment="Left"
                              MaxLength="10"
                              MaxWidth="100"
+                             IsEnabled="{Binding !TwitchUseReward}"
                              Text="{Binding TwitchCommandPrefix}" />
+                    
+                    <ToggleSwitch Content="Use Channel Points? (Disables the regular command)"
+                                  IsChecked="{Binding TwitchUseReward}" />
+                    <TextBlock Margin="0,5,0,0"
+                               Text="ID of the Reward (Use '!reward' with it to get the ID)"/>
+                    <TextBox Margin="0,5,0,15"
+                             HorizontalAlignment="Left"
+                             Width="250"
+                             IsEnabled="{Binding TwitchUseReward}"
+                             Text="{Binding TwitchRewardId}"/>
 
                     <TextBlock Text="Request Cooldown (seconds):"
                                TextWrapping="Wrap" />

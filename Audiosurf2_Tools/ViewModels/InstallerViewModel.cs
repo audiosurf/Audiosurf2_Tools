@@ -44,6 +44,7 @@ public class InstallerViewModel : ViewModelBase
 
     public async Task AutoFindAsync()
     {
+        Debug.WriteLine("AutoFindAsync: " + await ToolUtils.GetGameDirectoryAsync());
         GameLocation = await ToolUtils.GetGameDirectoryAsync();
     }
 
@@ -51,7 +52,6 @@ public class InstallerViewModel : ViewModelBase
     {
         var openFol = new OpenFolderDialog()
         {
-            Directory = "C:\\",
             Title = "Select the Audiosurf 2 install location"
         };
         var result = await openFol.ShowAsync(parent);
@@ -60,12 +60,21 @@ public class InstallerViewModel : ViewModelBase
             if (Directory.Exists(result))
             {
                 var dirInfo = new DirectoryInfo(result);
+#if LINUX
+                if (dirInfo.GetFiles().Any(x => x.Name.Contains("Audiosurf2.x86_64")))
+                {
+                    IsGameInstalled = false;
+                    IsPatchInstalled = false;
+                    GameLocation = result;
+                }
+#else
                 if (dirInfo.GetFiles().Any(x => x.Name.Contains("Audiosurf2.exe")))
                 {
                     IsGameInstalled = false;
                     IsPatchInstalled = false;
                     GameLocation = result;
                 }
+#endif
             }
         }
     }
@@ -76,7 +85,11 @@ public class InstallerViewModel : ViewModelBase
             return;
         IsGameInstalled = true;
         CanInstall = false;
+#if LINUX
+        var as2Ver = FileVersionInfo.GetVersionInfo(Path.Combine(GameLocation, "Audiosurf2.x86_64"));
+#else
         var as2Ver = FileVersionInfo.GetVersionInfo(Path.Combine(GameLocation, "Audiosurf2.exe"));
+#endif
 
         if (as2Ver.FileVersion?.StartsWith("2017.4.40") == true)
         {
@@ -94,7 +107,7 @@ public class InstallerViewModel : ViewModelBase
             UnityVersion = as2Ver.FileVersion;
             BetaChannel = "before_videosurf";
         }
-
+#if !LINUX
         if (Directory.Exists(Path.Combine(GameLocation, "Audiosurf2_Data\\patchupdater")))
         {
             IsPatchInstalled = true;
@@ -104,7 +117,7 @@ public class InstallerViewModel : ViewModelBase
             PatchVersion = version;
             PatchChannel = "beta patch";
         }
-        else if (Directory.Exists(Path.Combine(GameLocation, "Audiosurf2_Data\\Updater")))
+        if (Directory.Exists(Path.Combine(GameLocation, "Audiosurf2_Data\\Updater")))
         {
             IsPatchInstalled = true;
             var version = await File.ReadAllTextAsync(Path.Combine(GameLocation,
@@ -113,6 +126,18 @@ public class InstallerViewModel : ViewModelBase
             PatchVersion = version;
             PatchChannel = "latest patch";
         }
+#else
+        if (Directory.Exists(Path.Combine(GameLocation, "Audiosurf2_Data/Updater")))
+        {
+            IsPatchInstalled = true;
+            var version = await File.ReadAllTextAsync(Path.Combine(GameLocation,
+                "Audiosurf2_Data/Updater/version.txt"));
+
+            PatchVersion = version;
+            PatchChannel = "latest patch";
+        }
+#endif
+
     }
 
     public async Task InstallPatchAsync()
@@ -121,7 +146,11 @@ public class InstallerViewModel : ViewModelBase
         {
             ProgressValue = 0;
             StatusText = "Downloading Patch .zip";
+#if LINUX
+            var zipStream = await Consts.HttpClient.GetStreamAsync("https://files.audiosurf2.info/linux/audiosurf2_community_patch.zip");
+#else
             var zipStream = await Consts.HttpClient.GetStreamAsync("https://files.audiosurf2.info/newpatch/audiosurf2_community_patch.zip");
+#endif
             ProgressValue = 60;
             StatusText = "Extracting files...";
             var zip = new ZipArchive(zipStream);

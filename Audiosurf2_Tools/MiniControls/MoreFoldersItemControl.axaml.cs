@@ -23,7 +23,6 @@ public class MoreFoldersItemControl : UserControl
     {
         var openFolder = new OpenFolderDialog()
         {
-            Directory = "C:\\", 
             Title = "Select A Location That You Want To Add"
         };
         var wind = ((ClassicDesktopStyleApplicationLifetime) Application.Current!.ApplicationLifetime!).MainWindow;

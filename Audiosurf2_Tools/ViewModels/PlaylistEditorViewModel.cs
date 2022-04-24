@@ -105,7 +105,6 @@ public class PlaylistEditorViewModel : ViewModelBase
         {
             Title = "Select Local Songs to Add",
             AllowMultiple = true,
-            Directory = "C:\\",
             Filters = new()
             {
                 new()
@@ -140,7 +139,6 @@ public class PlaylistEditorViewModel : ViewModelBase
         {
             AllowMultiple = false,
             Title = "Open Playlist",
-            Directory = "C:\\",
             Filters = new()
             {
                 new()
@@ -158,7 +156,11 @@ public class PlaylistEditorViewModel : ViewModelBase
         if (result == null || result?.Count() == 0 || string.IsNullOrWhiteSpace(result?[0]) || !File.Exists(result[0]))
             return;
         PlaylistPath = result[0];
+#if LINUX
+        PlaylistName = result[0].Split('/').Last();
+#else
         PlaylistName = result[0].Split('\\').Last();
+#endif
         var plsTxt = await File.ReadAllTextAsync(result[0]);
         var content = new M3uContent();
         var pls = content.GetFromString(plsTxt);
@@ -177,11 +179,11 @@ public class PlaylistEditorViewModel : ViewModelBase
                 _ = Task.Run(itm.LoadInfoAsync);
                 PlaylistItems.Add(itm);
             }
-            else if (File.Exists(entry.Path.Replace("file:///", "").Replace('/', '\\')))
+            else if (File.Exists(entry.Path.Replace("file:///", "").Replace('\\', Path.DirectorySeparatorChar)))
             {
                 try
                 {
-                    var itm = new LocalPlaylistItem(entry.Path.Replace("file:///", "").Replace('/', '\\'), PlaylistItems);
+                    var itm = new LocalPlaylistItem(entry.Path.Replace("file:///", "").Replace('\\', Path.DirectorySeparatorChar), PlaylistItems);
                     PlaylistItems.Add(itm);
                 }
                 catch (Exception e)
@@ -228,7 +230,6 @@ public class PlaylistEditorViewModel : ViewModelBase
         {
             Title = "Save Playlist",
             InitialFileName = "Untitled.m3u",
-            Directory = "C:\\",
             Filters = new()
             {
                 new()
@@ -246,7 +247,11 @@ public class PlaylistEditorViewModel : ViewModelBase
         if (result == null || string.IsNullOrWhiteSpace(result))
             return;
         PlaylistPath = result;
+#if LINUX
+        PlaylistName = result.Split('/').Last();
+#else
         PlaylistName = result.Split('\\').Last();
+#endif
         await SavePlaylistAsync();
     }
 }

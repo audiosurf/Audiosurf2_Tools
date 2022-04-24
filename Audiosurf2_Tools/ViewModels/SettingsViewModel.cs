@@ -16,6 +16,8 @@ public class SettingsViewModel : ViewModelBase
 {
     [Reactive] public bool IsOpen { get; set; }
     [Reactive] public string TwitchCommandPrefix { get; set; } = "!";
+    [Reactive] public bool TwitchUseReward { get; set; } = false;
+    [Reactive] public string TwitchRewardId { get; set; }
     [Reactive] public int TwitchMaxQueueItemsUntilDuplicationsAllowed { get; set; } = 100;
     [Reactive] public int TwitchMaxRecentAgeBeforeDuplicationError { get; set; } = 5;
     [Reactive] public int TwitchMaxQueueSize { get; set; } = 25;
@@ -37,6 +39,8 @@ public class SettingsViewModel : ViewModelBase
     {
         var cfg = Globals.TryGetGlobal<AppSettings>("Settings");
         cfg!.TwitchCommandPrefix = TwitchCommandPrefix;
+        cfg.TwitchUseReward = TwitchUseReward;
+        cfg.TwitchRewardId = TwitchRewardId;
         cfg.TwitchMaxQueueItemsUntilDuplicationsAllowed = TwitchMaxQueueItemsUntilDuplicationsAllowed;
         cfg.TwitchMaxRecentAgeBeforeDuplicateError = TwitchMaxRecentAgeBeforeDuplicationError;
         cfg.TwitchMaxQueueSize = TwitchMaxQueueSize;
@@ -51,7 +55,7 @@ public class SettingsViewModel : ViewModelBase
         cfg.TwitchLocalRequestMaxSizeMB = TwitchLocalRequestMaxSizeMB;
         var text = JsonSerializer.Serialize(cfg);
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"), text);
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json").Replace('\\', Path.DirectorySeparatorChar), text);
         Globals.GlobalEntites["Settings"] = cfg; //Idk, just in case
     }
 
@@ -97,9 +101,9 @@ public class SettingsViewModel : ViewModelBase
             return;
 
         var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json"), JsonSerializer.Serialize(combo.GeneralSettings));
-        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json"), JsonSerializer.Serialize(combo.TwitchSettings));
-        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json"), JsonSerializer.Serialize(combo.TwitchPopOutSettings));
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\Settings.json").Replace('\\', Path.DirectorySeparatorChar), JsonSerializer.Serialize(combo.GeneralSettings));
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\TwitchSettings.json").Replace('\\', Path.DirectorySeparatorChar), JsonSerializer.Serialize(combo.TwitchSettings));
+        await File.WriteAllTextAsync(Path.Combine(appdata, "AS2Tools\\PopOutSettings.json").Replace('\\', Path.DirectorySeparatorChar), JsonSerializer.Serialize(combo.TwitchPopOutSettings));
         var vm = (MainWindowViewModel) parent.DataContext!;
         Globals.GlobalEntites.Remove("Settings");
         Globals.GlobalEntites.Remove("TwitchSettings");
@@ -173,8 +177,7 @@ public class SettingsViewModel : ViewModelBase
     {
         var openFolder = new OpenFolderDialog()
         {
-            Title = "Select the folder where your local requests files are...",
-            Directory = "C:\\"
+            Title = "Select the folder where your local requests files are..."
         };
         var result = await openFolder.ShowAsync(parent);
         if (string.IsNullOrWhiteSpace(result) || !Directory.Exists(result))
