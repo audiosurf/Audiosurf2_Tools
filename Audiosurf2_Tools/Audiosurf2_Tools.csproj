@@ -21,7 +21,7 @@
         <PackageReference Include="Aura.UI" Version="0.1.5-dev-04" />
         <PackageReference Include="Aura.UI.FluentTheme" Version="0.1.5-dev-04" />
         <PackageReference Include="Avalonia" Version="0.10.15" />
-        <PackageReference Include="Avalonia.Desktop" Version="0.10.13" />
+        <PackageReference Include="Avalonia.Desktop" Version="0.10.15" />
         <PackageReference Include="Avalonia.Diagnostics" Version="0.10.15" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
         <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.15" />
