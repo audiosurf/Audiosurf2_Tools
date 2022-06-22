@@ -6,7 +6,7 @@
         xmlns:controls="clr-namespace:Audiosurf2_Tools.Controls"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="400"
         x:Class="Audiosurf2_Tools.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/017.ico"
         Title="Audiosurf2_Tools"
         Background="Transparent"
         ExtendClientAreaToDecorationsHint="True"
