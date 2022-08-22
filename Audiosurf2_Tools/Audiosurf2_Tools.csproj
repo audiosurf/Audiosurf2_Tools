@@ -20,7 +20,7 @@
     <ItemGroup>
         <PackageReference Include="Aura.UI" Version="0.1.5-dev-04" />
         <PackageReference Include="Aura.UI.FluentTheme" Version="0.1.5-dev-04" />
-        <PackageReference Include="Avalonia" Version="0.10.18" />
+        <PackageReference Include="Avalonia" Version="0.10.15" />
         <PackageReference Include="Avalonia.Desktop" Version="0.10.15" />
         <PackageReference Include="Avalonia.Diagnostics" Version="0.10.15" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
@@ -28,10 +28,10 @@
         <PackageReference Include="Avalonia.Svg" Version="0.10.14" />
         <PackageReference Include="Dapper" Version="2.0.123" />
         <PackageReference Include="PlaylistsNET" Version="1.2.1" />
-        <PackageReference Include="ReactiveUI.Fody" Version="18.3.1" />
+        <PackageReference Include="ReactiveUI.Fody" Version="18.1.8" />
         <PackageReference Include="System.Data.SQLite" Version="1.0.116" />
         <PackageReference Include="ThemeEditor.Controls.ColorPicker" Version="0.10.14" />
-        <PackageReference Include="TwitchLib" Version="3.3.0" />
+        <PackageReference Include="TwitchLib" Version="3.4.1" />
         <PackageReference Include="YoutubeExplode" Version="6.2.1" />
         <PackageReference Include="z440.atl.core" Version="4.9.0" />
     </ItemGroup>
