@@ -30,7 +30,7 @@
         <PackageReference Include="PlaylistsNET" Version="1.2.1" />
         <PackageReference Include="ReactiveUI.Fody" Version="18.1.8" />
         <PackageReference Include="System.Data.SQLite" Version="1.0.116" />
-        <PackageReference Include="ThemeEditor.Controls.ColorPicker" Version="0.10.14" />
+        <PackageReference Include="ThemeEditor.Controls.ColorPicker" Version="0.10.17" />
         <PackageReference Include="TwitchLib" Version="3.4.1" />
         <PackageReference Include="YoutubeExplode" Version="6.2.1" />
         <PackageReference Include="z440.atl.core" Version="4.9.0" />
